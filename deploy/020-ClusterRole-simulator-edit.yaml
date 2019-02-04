@@ -1,0 +1,12 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: iot.dentrassi.de:simulator-edit
+  labels:
+    enmasse-component: iot
+    rbac.authorization.k8s.io/aggregate-to-admin: "true"
+    rbac.authorization.k8s.io/aggregate-to-edit: "true"
+rules:
+  - apiGroups: [ "iot.dentrassi.de" ]
+    resources: [ "consumers", "messagingendpoints" ]
+    verbs: [ "create", "get", "update", "delete", "list", "watch", "patch" ]
