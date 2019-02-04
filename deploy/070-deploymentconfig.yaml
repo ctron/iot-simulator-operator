@@ -1,0 +1,34 @@
+kind: DeploymentConfig
+apiVersion: v1
+metadata:
+  name: simulator-operator
+  labels:
+    app: simulator
+    deploymentconfig: simulator-operator
+spec:
+  replicas: 1
+  selector:
+    app: simulator
+    deploymentconfig: simulator-operator
+  strategy:
+    type: Rolling
+  triggers:
+    - type: ConfigChange
+    - type: ImageChange
+      imageChangeParams:
+        automatic: true
+        containerNames:
+          - operator
+        from:
+          kind: ImageStreamTag
+          name: simulator-operator:latest
+  template:
+    metadata:
+      labels:
+        app: simulator
+        deploymentconfig: simulator-operator
+    spec:
+      containers:
+        - image: simulator-operator
+          imagePullPolicy: Always
+          name: operator

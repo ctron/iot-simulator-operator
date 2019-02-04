@@ -1,0 +1,20 @@
+---
+kind: ImageStream
+apiVersion: v1
+metadata:
+  name: fedora
+spec:
+  tags:
+    - name: "29"
+      from:
+        kind: DockerImage
+        name: docker.io/fedora:29
+      importPolicy:
+        scheduled: true
+      referencePolicy:
+        type: Source
+---
+kind: ImageStream
+apiVersion: v1
+metadata:
+  name: simulator-operator

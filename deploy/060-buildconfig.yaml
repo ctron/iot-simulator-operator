@@ -1,0 +1,23 @@
+kind: BuildConfig
+apiVersion: v1
+metadata:
+  name: simulator-operator
+spec:
+  triggers:
+    - type: ImageChange
+    - type: ConfigChange
+  source:
+    type: Git
+    git:
+      uri: https://github.com/ctron/iot-simulator-operator
+      ref: master
+  strategy:
+    type: Docker
+    dockerStrategy:
+      from:
+        kind: ImageStreamTag
+        name: fedora:29
+  output:
+    to:
+      kind: ImageStreamTag
+      name: simulator-operator:latest
