@@ -20,6 +20,7 @@ import (
 	"runtime"
 
 	"github.com/ctron/iot-simulator-operator/pkg/apis/simulator/v1alpha1"
+	"github.com/openshift/api/apps"
 
 	"github.com/ctron/iot-simulator-operator/pkg/apis"
 	"github.com/ctron/iot-simulator-operator/pkg/controller"
@@ -79,6 +80,11 @@ func main() {
 
 	// Setup Scheme for all resources
 	if err := apis.AddToScheme(mgr.GetScheme()); err != nil {
+		log.Error(err, "")
+		os.Exit(1)
+	}
+
+	if err := apps.Install(mgr.GetScheme()); err != nil {
 		log.Error(err, "")
 		os.Exit(1)
 	}
