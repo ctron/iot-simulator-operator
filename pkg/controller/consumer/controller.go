@@ -146,7 +146,7 @@ func (r *ReconcileConsumer) reconileDeploymentConfig(consumer *simv1alpha1.Consu
 						Name:    "consumer",
 						Command: []string{"java", "-Xmx1024m", "-Dvertx.cacheDirBase=/tmp", "-Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.SLF4JLogDelegateFactory", "-jar", "/build/simulator-consumer/target/simulator-consumer-app.jar"},
 						Env: []v1.EnvVar{
-							{Name: "HONO_TRUSTED_CERTS", Value: "/etc/secrets/server-cert.pem"},
+							{Name: "HONO_TRUSTED_CERTS", Value: "/etc/secrets/ca.crt"},
 							{Name: "HONO_INITIAL_CREDITS", Value: "100"},
 							{Name: "HONO_TENANT", ValueFrom: &v1.EnvVarSource{FieldRef: &v1.ObjectFieldSelector{APIVersion: "v1", FieldPath: "metadata.labels['iot.simulator.tenant']"}}},
 							{Name: "HONO_USER", ValueFrom: &v1.EnvVarSource{SecretKeyRef: &v1.SecretKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: sec}, Key: "endpoint.username"}}},
