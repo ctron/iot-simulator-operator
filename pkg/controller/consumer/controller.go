@@ -130,7 +130,7 @@ func (r *ReconcileConsumer) reconileDeploymentConfig(consumer *simv1alpha1.Consu
 			"deploymentconfig": "dc-" + existing.Name,
 		},
 		Strategy: appsv1.DeploymentStrategy{
-			Type: "rolling",
+			Type: appsv1.DeploymentStrategyTypeRolling,
 		},
 		Template: &corev1.PodTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{
@@ -172,8 +172,8 @@ func (r *ReconcileConsumer) reconileDeploymentConfig(consumer *simv1alpha1.Consu
 			},
 		},
 		Triggers: appsv1.DeploymentTriggerPolicies{
-			{Type: "ConfigChange"},
-			{Type: "ImageChange", ImageChangeParams: &appsv1.DeploymentTriggerImageChangeParams{
+			{Type: appsv1.DeploymentTriggerOnConfigChange},
+			{Type: appsv1.DeploymentTriggerOnImageChange, ImageChangeParams: &appsv1.DeploymentTriggerImageChangeParams{
 				Automatic:      true,
 				ContainerNames: []string{"consumer"},
 				From: v1.ObjectReference{
