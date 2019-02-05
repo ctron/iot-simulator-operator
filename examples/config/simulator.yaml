@@ -1,0 +1,19 @@
+---
+kind: Secret
+apiVersion: v1
+metadata:
+  name: enmasse1
+spec:
+  host:
+  port:
+  username:
+  password:
+
+---
+kind: Consumer
+apiVersion: v1alpha1
+metadata:
+  name: sim1
+spec:
+  tenant: my-iot-1.managed
+  endpointSecret: enmasse1

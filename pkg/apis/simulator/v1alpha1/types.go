@@ -19,23 +19,6 @@ import (
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +k8s:openapi-gen=true
-type MessagingEndpoint struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
-
-	Spec MessagingEndpointSpec `json:"spec,omitempty"`
-}
-
-type MessagingEndpointSpec struct {
-	Host          string
-	Port          int
-	Username      string
-	Password      string
-	CACertificate []byte
-}
-
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-// +k8s:openapi-gen=true
 type Consumer struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -44,16 +27,8 @@ type Consumer struct {
 }
 
 type ConsumerSpec struct {
-	Tenant            string `json:"tenant"`
-	MessagingEndpoint string `json:"endpoint"`
-}
-
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-type MessagingEndpointList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []MessagingEndpoint `json:"items"`
+	Tenant         string `json:"tenant"`
+	EndpointSecret string `json:"endpointSecret"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -68,9 +43,6 @@ type ConsumerList struct {
 
 func init() {
 	SchemeBuilder.Register(
-		&MessagingEndpoint{},
-		&MessagingEndpointList{},
-
 		&Consumer{},
 		&ConsumerList{},
 	)

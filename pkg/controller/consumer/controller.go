@@ -121,7 +121,7 @@ func (r *ReconcileConsumer) Reconcile(request reconcile.Request) (reconcile.Resu
 
 func (r *ReconcileConsumer) reconileDeploymentConfig(consumer *simv1alpha1.Consumer, existing *appsv1.DeploymentConfig) {
 
-	sec := "simulator-secrets-" + consumer.Spec.MessagingEndpoint
+	sec := consumer.Spec.EndpointSecret
 
 	existing.Spec = appsv1.DeploymentConfigSpec{
 		Replicas: 1,

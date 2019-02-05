@@ -13,5 +13,5 @@ rules:
   resources: [ "deploymentconfigs" ]
   verbs: [ '*' ]
 - apiGroups: [ "iot.dentrassi.de" ]
-  resources: [ "consumers", "messagingendpoints" ]
+  resources: [ "consumers" ]
   verbs: [ '*' ]
