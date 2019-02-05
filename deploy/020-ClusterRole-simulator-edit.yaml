@@ -3,7 +3,6 @@ kind: ClusterRole
 metadata:
   name: iot.dentrassi.de:simulator-edit
   labels:
-    enmasse-component: iot
     rbac.authorization.k8s.io/aggregate-to-admin: "true"
     rbac.authorization.k8s.io/aggregate-to-edit: "true"
 rules:

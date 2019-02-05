@@ -3,7 +3,6 @@ kind: ClusterRole
 metadata:
   name: iot.dentrassi.de:simulator-view
   labels:
-    enmasse-component: iot
     rbac.authorization.k8s.io/aggregate-to-view: "true"
 rules:
   - apiGroups: [ "iot.dentrassi.de" ]

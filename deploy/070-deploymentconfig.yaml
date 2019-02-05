@@ -28,7 +28,14 @@ spec:
         app: simulator
         deploymentconfig: simulator-operator
     spec:
+      serviceAccount: iot-simulator-operator
       containers:
         - image: simulator-operator
           imagePullPolicy: Always
           name: operator
+          env:
+            - name: WATCH_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+

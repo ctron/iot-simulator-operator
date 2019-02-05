@@ -9,9 +9,9 @@ rules:
     - configmaps
   verbs:
     - '*'
-- apiGroups:
-  - "apps.openshift.io"
-  resources:
-  - deploymentconfigs
-  verbs:
-  - '*'
+- apiGroups: [ "apps.openshift.io" ]
+  resources: [ "deploymentconfigs" ]
+  verbs: [ '*' ]
+- apiGroups: [ "iot.dentrassi.de" ]
+  resources: [ "consumers", "messagingendpoints" ]
+  verbs: [ '*' ]
