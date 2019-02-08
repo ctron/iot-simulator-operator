@@ -16,6 +16,12 @@ package consumer
 import (
 	"context"
 
+	"k8s.io/apimachinery/pkg/util/intstr"
+
+	"github.com/ctron/iot-simulator-operator/pkg/utils"
+
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
 	"k8s.io/api/core/v1"
 	corev1 "k8s.io/api/core/v1"
 
@@ -26,7 +32,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -93,38 +98,77 @@ func (r *ReconcileConsumer) Reconcile(request reconcile.Request) (reconcile.Resu
 		return reconcile.Result{}, err
 	}
 
-	pod := appsv1.DeploymentConfig{
+	err = r.reconcileDeploymentConfig(request, instance)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	err = r.reconcileService(request, instance)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	return reconcile.Result{}, nil
+}
+
+func (r *ReconcileConsumer) reconcileService(request reconcile.Request, instance *simv1alpha1.SimulationConsumer) error {
+
+	svc := v1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "sim-consumer-" + request.Name,
 			Namespace: request.Namespace,
 		},
 	}
 
-	_, err = controllerutil.CreateOrUpdate(context.TODO(), r.client, &pod, func(existingObject runtime.Object) error {
-		existing := existingObject.(*appsv1.DeploymentConfig)
+	_, err := controllerutil.CreateOrUpdate(context.TODO(), r.client, &svc, func(existingObject runtime.Object) error {
 
-		var TRUE = true
-		ts := existing.GetCreationTimestamp()
-		if ts.IsZero() {
-			existing.SetOwnerReferences([]metav1.OwnerReference{{
-				APIVersion: instance.APIVersion,
-				Kind:       instance.Kind,
-				Name:       instance.GetName(),
-				UID:        instance.GetUID(),
-				Controller: &TRUE,
-			}})
-		}
+		utils.SetOwnerReference(instance, existingObject)
 
-		r.reconileDeploymentConfig(instance, existing)
+		existing := existingObject.(*v1.Service)
+		r.configureService(instance, existing)
 
 		return nil
 	})
 
-	return reconcile.Result{}, err
+	return err
+}
+
+func (r *ReconcileConsumer) configureService(consumer *simv1alpha1.SimulationConsumer, existing *v1.Service) {
+
+	existing.Spec = v1.ServiceSpec{
+		Ports: []corev1.ServicePort{
+			{Name: "metrics", Port: 8081, TargetPort: intstr.FromInt(8081)},
+		},
+		Selector: map[string]string{
+			"app":              "simulator",
+			"deploymentconfig": "dc-" + existing.Name,
+		},
+	}
 
 }
 
-func (r *ReconcileConsumer) reconileDeploymentConfig(consumer *simv1alpha1.SimulationConsumer, existing *appsv1.DeploymentConfig) {
+func (r *ReconcileConsumer) reconcileDeploymentConfig(request reconcile.Request, instance *simv1alpha1.SimulationConsumer) error {
+	dc := appsv1.DeploymentConfig{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "sim-consumer-" + request.Name,
+			Namespace: request.Namespace,
+		},
+	}
+
+	_, err := controllerutil.CreateOrUpdate(context.TODO(), r.client, &dc, func(existingObject runtime.Object) error {
+
+		utils.SetOwnerReference(instance, existingObject)
+
+		existing := existingObject.(*appsv1.DeploymentConfig)
+		r.configureDeploymentConfig(instance, existing)
+
+		return nil
+	})
+
+	return err
+}
+
+func (r *ReconcileConsumer) configureDeploymentConfig(consumer *simv1alpha1.SimulationConsumer, existing *appsv1.DeploymentConfig) {
 
 	sec := consumer.Spec.EndpointSecret
 
