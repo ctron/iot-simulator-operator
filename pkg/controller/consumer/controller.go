@@ -51,13 +51,13 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	err = c.Watch(&source.Kind{Type: &simv1alpha1.Consumer{}}, &handler.EnqueueRequestForObject{})
+	err = c.Watch(&source.Kind{Type: &simv1alpha1.SimulationConsumer{}}, &handler.EnqueueRequestForObject{})
 	if err != nil {
 		return err
 	}
 
 	err = c.Watch(&source.Kind{Type: &appsv1.DeploymentConfig{}}, &handler.EnqueueRequestForOwner{
-		IsController: true, OwnerType: &simv1alpha1.Consumer{},
+		IsController: true, OwnerType: &simv1alpha1.SimulationConsumer{},
 	})
 	if err != nil {
 		return err
@@ -80,7 +80,7 @@ func (r *ReconcileConsumer) Reconcile(request reconcile.Request) (reconcile.Resu
 	reqLogger.Info("Reconciling Consumer")
 
 	// Fetch the Consumer instance
-	instance := &simv1alpha1.Consumer{}
+	instance := &simv1alpha1.SimulationConsumer{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -103,11 +103,16 @@ func (r *ReconcileConsumer) Reconcile(request reconcile.Request) (reconcile.Resu
 	_, err = controllerutil.CreateOrUpdate(context.TODO(), r.client, &pod, func(existingObject runtime.Object) error {
 		existing := existingObject.(*appsv1.DeploymentConfig)
 
+		var TRUE = true
 		ts := existing.GetCreationTimestamp()
 		if ts.IsZero() {
-			if err := controllerutil.SetControllerReference(instance, existing, r.scheme); err != nil {
-				return err
-			}
+			existing.SetOwnerReferences([]metav1.OwnerReference{{
+				APIVersion: instance.APIVersion,
+				Kind:       instance.Kind,
+				Name:       instance.GetName(),
+				UID:        instance.GetUID(),
+				Controller: &TRUE,
+			}})
 		}
 
 		r.reconileDeploymentConfig(instance, existing)
@@ -119,7 +124,7 @@ func (r *ReconcileConsumer) Reconcile(request reconcile.Request) (reconcile.Resu
 
 }
 
-func (r *ReconcileConsumer) reconileDeploymentConfig(consumer *simv1alpha1.Consumer, existing *appsv1.DeploymentConfig) {
+func (r *ReconcileConsumer) reconileDeploymentConfig(consumer *simv1alpha1.SimulationConsumer, existing *appsv1.DeploymentConfig) {
 
 	sec := consumer.Spec.EndpointSecret
 

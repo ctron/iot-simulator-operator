@@ -19,7 +19,7 @@ import (
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +k8s:openapi-gen=true
-type Consumer struct {
+type SimulationConsumer struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
@@ -33,17 +33,17 @@ type ConsumerSpec struct {
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-type ConsumerList struct {
+type SimulationConsumerList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []Consumer `json:"items"`
+	Items           []SimulationConsumer `json:"items"`
 }
 
 // init
 
 func init() {
 	SchemeBuilder.Register(
-		&Consumer{},
-		&ConsumerList{},
+		&SimulationConsumer{},
+		&SimulationConsumerList{},
 	)
 }
