@@ -6,5 +6,5 @@ metadata:
     rbac.authorization.k8s.io/aggregate-to-view: "true"
 rules:
   - apiGroups: [ "iot.dentrassi.de" ]
-    resources: [ "simulatorconsumers" ]
-    verbs: [ "get", "list" ]
+    resources: [ "simulatorconsumers", "simulatorproducers" ]
+    verbs: [ "get", "list", "watch" ]

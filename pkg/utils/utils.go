@@ -14,35 +14,55 @@
 package utils
 
 import (
+	"fmt"
+
 	"github.com/ctron/iot-simulator-operator/pkg/apis/simulator/v1alpha1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func SetOwnerReference(instance *v1alpha1.SimulatorConsumer, existingObject runtime.Object) {
+func SetOwnerReference(owner v1.Object, existingObject runtime.Object, scheme *runtime.Scheme) error {
 
 	// we need to roll our own logic here, since we do not want
 	// to set blockOwnerDeletion to TRUE
+
+	ro, ok := owner.(runtime.Object)
+	if !ok {
+		return fmt.Errorf("is not a %T a runtime.Object, cannot call SetControllerReference", owner)
+	}
+
+	gvk, err := apiutil.GVKForObject(ro, scheme)
+	if err != nil {
+		return err
+	}
 
 	existingObj := existingObject.(v1.Object)
 	var TRUE = true
 	ts := existingObj.GetCreationTimestamp()
 	if ts.IsZero() {
 		existingObj.SetOwnerReferences([]v1.OwnerReference{{
-			APIVersion: instance.APIVersion,
-			Kind:       instance.Kind,
-			Name:       instance.GetName(),
-			UID:        instance.GetUID(),
+			APIVersion: gvk.GroupVersion().String(),
+			Kind:       gvk.Kind,
+			Name:       owner.GetName(),
+			UID:        owner.GetUID(),
 			Controller: &TRUE,
 		}})
 	}
 
+	return nil
 }
 
-func MakeHelmInstanceName(consumer *v1alpha1.SimulatorConsumer) string {
-	if consumer.Spec.Simulator == "" {
+func MakeHelmInstanceName(obj v1alpha1.SimulatorComponent) string {
+	if obj.GetCommonSpec().Simulator == "" {
 		return "iot-simulator"
 	} else {
-		return consumer.Spec.Simulator + "-iot-simulator"
+		return obj.GetCommonSpec().Simulator + "-iot-simulator"
 	}
+}
+
+func DeploymentConfigName(prefix string, obj metav1.Object) string {
+	return "dc-" + prefix + "-" + obj.GetName()
 }

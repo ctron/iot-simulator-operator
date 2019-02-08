@@ -12,10 +12,24 @@ stringData:
   endpoint.username: user1
   endpoint.password: password1
 ---
-kind: SimulationConsumer
+kind: SimulatorConsumer
 apiVersion: iot.dentrassi.de/v1alpha1
 metadata:
-  name: sim1
+  name: con1
 spec:
+  simulator: sim
   tenant: my-iot-1.managed
+  type: telemetry
   endpointSecret: enmasse1
+---
+kind: SimulatorProducer
+apiVersion: iot.dentrassi.de/v1alpha1
+metadata:
+  name: prod1
+spec:
+  simulator: sim
+  tenant: my-iot-1.managed
+  type: telemetry
+  endpointSecret: enmasse1
+  numberOfDevices: 10
+  replicas: 1

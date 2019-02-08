@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018 Red Hat Inc
+ * Copyright (c) 2019 Red Hat Inc
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -11,15 +11,19 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package controller
+package v1alpha1
 
-import (
-	"github.com/ctron/iot-simulator-operator/pkg/controller/consumer"
-	"github.com/ctron/iot-simulator-operator/pkg/controller/producer"
-)
+type SimulatorComponent interface {
+	GetCommonSpec() CommonSpec
+}
 
-func init() {
-	// AddToManagerFuncs is a list of functions to create controllers and add them to a manager.
-	AddToManagerFuncs = append(AddToManagerFuncs, consumer.Add)
-	AddToManagerFuncs = append(AddToManagerFuncs, producer.Add)
+var _ SimulatorComponent = &SimulatorConsumer{}
+var _ SimulatorComponent = &SimulatorProducer{}
+
+func (s *SimulatorConsumer) GetCommonSpec() CommonSpec {
+	return s.Spec.CommonSpec
+}
+
+func (s *SimulatorProducer) GetCommonSpec() CommonSpec {
+	return s.Spec.CommonSpec
 }

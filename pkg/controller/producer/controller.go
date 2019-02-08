@@ -11,10 +11,11 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package consumer
+package producer
 
 import (
 	"context"
+	"strconv"
 
 	"k8s.io/apimachinery/pkg/util/intstr"
 
@@ -39,30 +40,30 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-var log = logf.Log.WithName("controller_consumer")
+var log = logf.Log.WithName("controller_producer")
 
 func Add(mgr manager.Manager) error {
 	return add(mgr, newReconciler(mgr))
 }
 
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileConsumer{client: mgr.GetClient(), scheme: mgr.GetScheme()}
+	return &ReconcileProducer{client: mgr.GetClient(), scheme: mgr.GetScheme()}
 }
 
 func add(mgr manager.Manager, r reconcile.Reconciler) error {
 
-	c, err := controller.New("consumer-controller", mgr, controller.Options{Reconciler: r})
+	c, err := controller.New("producer-controller", mgr, controller.Options{Reconciler: r})
 	if err != nil {
 		return err
 	}
 
-	err = c.Watch(&source.Kind{Type: &simv1alpha1.SimulatorConsumer{}}, &handler.EnqueueRequestForObject{})
+	err = c.Watch(&source.Kind{Type: &simv1alpha1.SimulatorProducer{}}, &handler.EnqueueRequestForObject{})
 	if err != nil {
 		return err
 	}
 
 	err = c.Watch(&source.Kind{Type: &appsv1.DeploymentConfig{}}, &handler.EnqueueRequestForOwner{
-		IsController: true, OwnerType: &simv1alpha1.SimulatorConsumer{},
+		IsController: true, OwnerType: &simv1alpha1.SimulatorProducer{},
 	})
 	if err != nil {
 		return err
@@ -71,21 +72,21 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	return nil
 }
 
-var _ reconcile.Reconciler = &ReconcileConsumer{}
+var _ reconcile.Reconciler = &ReconcileProducer{}
 
-type ReconcileConsumer struct {
+type ReconcileProducer struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
 	client client.Client
 	scheme *runtime.Scheme
 }
 
-func (r *ReconcileConsumer) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *ReconcileProducer) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
-	reqLogger.Info("Reconciling Consumer")
+	reqLogger.Info("Reconciling Producer")
 
-	// Fetch the Consumer instance
-	instance := &simv1alpha1.SimulatorConsumer{}
+	// Fetch the Producer instance
+	instance := &simv1alpha1.SimulatorProducer{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -111,11 +112,11 @@ func (r *ReconcileConsumer) Reconcile(request reconcile.Request) (reconcile.Resu
 	return reconcile.Result{}, nil
 }
 
-func (r *ReconcileConsumer) reconcileService(request reconcile.Request, instance *simv1alpha1.SimulatorConsumer) error {
+func (r *ReconcileProducer) reconcileService(request reconcile.Request, instance *simv1alpha1.SimulatorProducer) error {
 
 	svc := v1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "sim-consumer-" + request.Name,
+			Name:      "sim-producer-" + request.Name,
 			Namespace: request.Namespace,
 		},
 	}
@@ -135,31 +136,10 @@ func (r *ReconcileConsumer) reconcileService(request reconcile.Request, instance
 	return err
 }
 
-func (r *ReconcileConsumer) configureService(consumer *simv1alpha1.SimulatorConsumer, existing *v1.Service) {
-
-	if existing.ObjectMeta.Labels == nil {
-		existing.ObjectMeta.Labels = map[string]string{}
-	}
-
-	existing.ObjectMeta.Labels["app"] = utils.MakeHelmInstanceName(consumer)
-	existing.ObjectMeta.Labels["deploymentconfig"] = utils.DeploymentConfigName("con", existing)
-	existing.ObjectMeta.Labels["metrics"] = utils.MakeHelmInstanceName(consumer)
-	existing.ObjectMeta.Labels["iot.simulator"] = consumer.Spec.Simulator
-
-	existing.Spec.Ports = []corev1.ServicePort{
-		{Name: "metrics", Port: 8081, TargetPort: intstr.FromInt(8081)},
-	}
-	existing.Spec.Selector = map[string]string{
-		"app":              utils.MakeHelmInstanceName(consumer),
-		"deploymentconfig": utils.DeploymentConfigName("con", existing),
-	}
-
-}
-
-func (r *ReconcileConsumer) reconcileDeploymentConfig(request reconcile.Request, instance *simv1alpha1.SimulatorConsumer) error {
+func (r *ReconcileProducer) reconcileDeploymentConfig(request reconcile.Request, instance *simv1alpha1.SimulatorProducer) error {
 	dc := appsv1.DeploymentConfig{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "sim-consumer-" + request.Name,
+			Name:      "sim-producer-" + request.Name,
 			Namespace: request.Namespace,
 		},
 	}
@@ -179,42 +159,63 @@ func (r *ReconcileConsumer) reconcileDeploymentConfig(request reconcile.Request,
 	return err
 }
 
-func (r *ReconcileConsumer) configureDeploymentConfig(consumer *simv1alpha1.SimulatorConsumer, existing *appsv1.DeploymentConfig) {
+func (r *ReconcileProducer) configureService(producer *simv1alpha1.SimulatorProducer, existing *v1.Service) {
 
 	if existing.ObjectMeta.Labels == nil {
 		existing.ObjectMeta.Labels = map[string]string{}
 	}
 
-	sec := consumer.Spec.EndpointSecret
-	messageType := consumer.Spec.Type
+	existing.ObjectMeta.Labels["app"] = utils.MakeHelmInstanceName(producer)
+	existing.ObjectMeta.Labels["deploymentconfig"] = utils.DeploymentConfigName("prod", existing)
+	existing.ObjectMeta.Labels["metrics"] = utils.MakeHelmInstanceName(producer)
+	existing.ObjectMeta.Labels["iot.simulator"] = producer.Spec.Simulator
+
+	existing.Spec.Ports = []corev1.ServicePort{
+		{Name: "metrics", Port: 8081, TargetPort: intstr.FromInt(8081)},
+	}
+	existing.Spec.Selector = map[string]string{
+		"app":              utils.MakeHelmInstanceName(producer),
+		"deploymentconfig": utils.DeploymentConfigName("prod", existing),
+	}
+
+}
+
+func (r *ReconcileProducer) configureDeploymentConfig(producer *simv1alpha1.SimulatorProducer, existing *appsv1.DeploymentConfig) {
+
+	if existing.ObjectMeta.Labels == nil {
+		existing.ObjectMeta.Labels = map[string]string{}
+	}
+
+	sec := producer.Spec.EndpointSecret
+	messageType := producer.Spec.Type
 	if messageType == "" {
 		messageType = "telemetry"
 	}
 
-	existing.ObjectMeta.Labels["app"] = utils.MakeHelmInstanceName(consumer)
-	existing.ObjectMeta.Labels["deploymentconfig"] = utils.DeploymentConfigName("con", existing)
-	existing.ObjectMeta.Labels["iot.simulator.tenant"] = consumer.Spec.Tenant
-	existing.ObjectMeta.Labels["iot.simulator"] = consumer.Spec.Simulator
-	existing.ObjectMeta.Labels["iot.simulator.app"] = "consumer"
+	existing.ObjectMeta.Labels["app"] = utils.MakeHelmInstanceName(producer)
+	existing.ObjectMeta.Labels["deploymentconfig"] = utils.DeploymentConfigName("prod", existing)
+	existing.ObjectMeta.Labels["iot.simulator.tenant"] = producer.Spec.Tenant
+	existing.ObjectMeta.Labels["iot.simulator"] = producer.Spec.Simulator
+	existing.ObjectMeta.Labels["iot.simulator.app"] = "producer"
 	existing.ObjectMeta.Labels["iot.simulator.message.type"] = messageType
 
 	existing.Spec.Replicas = 1
 	existing.Spec.Selector = map[string]string{
-		"app":              utils.MakeHelmInstanceName(consumer),
-		"deploymentconfig": utils.DeploymentConfigName("con", existing),
+		"app":              utils.MakeHelmInstanceName(producer),
+		"deploymentconfig": utils.DeploymentConfigName("prod", existing),
 	}
 
-	existing.Spec.Strategy.Type = appsv1.DeploymentStrategyTypeRolling
+	existing.Spec.Strategy.Type = appsv1.DeploymentStrategyTypeRecreate
 
 	if existing.Spec.Template == nil {
 		existing.Spec.Template = &v1.PodTemplateSpec{}
 	}
 	existing.Spec.Template.ObjectMeta = metav1.ObjectMeta{
 		Labels: map[string]string{
-			"app":                  utils.MakeHelmInstanceName(consumer),
-			"deploymentconfig":     utils.DeploymentConfigName("con", existing),
-			"iot.simulator.tenant": consumer.Spec.Tenant,
-			"iot.simulator":        consumer.Spec.Simulator,
+			"app":                  utils.MakeHelmInstanceName(producer),
+			"deploymentconfig":     utils.DeploymentConfigName("prod", existing),
+			"iot.simulator.tenant": producer.Spec.Tenant,
+			"iot.simulator":        producer.Spec.Simulator,
 		},
 	}
 
@@ -222,34 +223,22 @@ func (r *ReconcileConsumer) configureDeploymentConfig(consumer *simv1alpha1.Simu
 		existing.Spec.Template.Spec.Containers = make([]corev1.Container, 1)
 	}
 
-	existing.Spec.Template.Spec.Containers[0].Name = "consumer"
-	existing.Spec.Template.Spec.Containers[0].Command = []string{"java", "-Xmx1024m", "-Dvertx.cacheDirBase=/tmp", "-Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.SLF4JLogDelegateFactory", "-jar", "/build/simulator-consumer/target/simulator-consumer-app.jar"}
+	existing.Spec.Template.Spec.Containers[0].Name = "producer"
 	existing.Spec.Template.Spec.Containers[0].Env = []v1.EnvVar{
-		{Name: "CONSUMING", Value: messageType},
-		{Name: "HONO_TRUSTED_CERTS", Value: "/etc/secrets/ca.crt"},
-		{Name: "HONO_INITIAL_CREDITS", Value: "100"},
+
+		{Name: "NUM_DEVICES", Value: strconv.FormatUint(uint64(producer.Spec.NumberOfDevices), 10)},
 		{Name: "HONO_TENANT", ValueFrom: &v1.EnvVarSource{FieldRef: &v1.ObjectFieldSelector{APIVersion: "v1", FieldPath: "metadata.labels['iot.simulator.tenant']"}}},
-		{Name: "HONO_USER", ValueFrom: &v1.EnvVarSource{SecretKeyRef: &v1.SecretKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: sec}, Key: "endpoint.username"}}},
-		{Name: "HONO_PASSWORD", ValueFrom: &v1.EnvVarSource{SecretKeyRef: &v1.SecretKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: sec}, Key: "endpoint.password"}}},
-		{Name: "MESSAGING_SERVICE_HOST", ValueFrom: &v1.EnvVarSource{SecretKeyRef: &v1.SecretKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: sec}, Key: "endpoint.host"}}},
-		{Name: "MESSAGING_SERVICE_PORT_AMQP", ValueFrom: &v1.EnvVarSource{SecretKeyRef: &v1.SecretKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: sec}, Key: "endpoint.port"}}},
+
+		{Name: "DEVICE_REGISTRY_URL", ValueFrom: &v1.EnvVarSource{SecretKeyRef: &v1.SecretKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: sec}, Key: "deviceRegistry.url"}}},
 	}
+
+	existing.Spec.Template.Spec.Containers[0].Env = append(existing.Spec.Template.Spec.Containers[0].Env, httpVariables(sec)...)
+
 	existing.Spec.Template.Spec.Containers[0].Ports = []v1.ContainerPort{
 		{ContainerPort: 8081, Name: "metrics"},
 	}
-	existing.Spec.Template.Spec.Containers[0].VolumeMounts = []corev1.VolumeMount{
-		{MountPath: "/etc/secrets", Name: "secrets-volume"},
-	}
 
-	if len(existing.Spec.Template.Spec.Volumes) != 1 {
-		existing.Spec.Template.Spec.Volumes = make([]corev1.Volume, 1)
-	}
-
-	existing.Spec.Template.Spec.Volumes[0].Name = "secrets-volume"
-	if existing.Spec.Template.Spec.Volumes[0].Secret == nil {
-		existing.Spec.Template.Spec.Volumes[0].Secret = &corev1.SecretVolumeSource{}
-	}
-	existing.Spec.Template.Spec.Volumes[0].Secret.SecretName = sec
+	// triggers
 
 	if len(existing.Spec.Triggers) != 2 {
 		existing.Spec.Triggers = make([]appsv1.DeploymentTriggerPolicy, 2)
@@ -261,10 +250,47 @@ func (r *ReconcileConsumer) configureDeploymentConfig(consumer *simv1alpha1.Simu
 		existing.Spec.Triggers[1].ImageChangeParams = &appsv1.DeploymentTriggerImageChangeParams{}
 	}
 	existing.Spec.Triggers[1].ImageChangeParams.Automatic = true
-	existing.Spec.Triggers[1].ImageChangeParams.ContainerNames = []string{"consumer"}
+	existing.Spec.Triggers[1].ImageChangeParams.ContainerNames = []string{"producer"}
 	existing.Spec.Triggers[1].ImageChangeParams.From = v1.ObjectReference{
 		Kind: "ImageStreamTag",
-		Name: utils.MakeHelmInstanceName(consumer) + "-parent:latest",
+		Name: utils.MakeHelmInstanceName(producer) + "-parent:latest",
 	}
 
+	// not apply http specifics
+	r.configureHttp(producer, existing, messageType, sec)
+}
+
+func (r *ReconcileProducer) configureHttp(producer *simv1alpha1.SimulatorProducer, existing *appsv1.DeploymentConfig, messageType string, sec string) {
+
+	existing.ObjectMeta.Labels["iot.simulator.producer.protocol"] = "http"
+
+	existing.Spec.Template.Spec.Containers[0].Command = []string{"java",
+		"-Xmx1024m",
+		"-Dvertx.cacheDirBase=/tmp",
+		"-Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.SLF4JLogDelegateFactory",
+		"-jar",
+		"/build/simulator-http/target/simulator-http-app.jar"}
+	existing.Spec.Template.Spec.Containers[0].Env = appendType(messageType, existing.Spec.Template.Spec.Containers[0].Env)
+}
+
+func httpVariables(sec string) []corev1.EnvVar {
+
+	return []v1.EnvVar{
+		{Name: "HONO_HTTP_URL", ValueFrom: &v1.EnvVarSource{SecretKeyRef: &v1.SecretKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: sec}, Key: "httpAdapter.url"}}},
+		{Name: "DEVICE_PROVIDER", Value: "VERTX"},
+		{Name: "VERTX_POOLED_BUFFERS", Value: "true"},
+		{Name: "VERTX_RECREATE_CLIENT", Value: "120000"},
+		{Name: "VERTX_KEEP_ALIVE", Value: "true"},
+	}
+}
+
+func appendType(t string, vars []corev1.EnvVar) []corev1.EnvVar {
+	switch t {
+	case "telemetry":
+		return append(vars, corev1.EnvVar{Name: "TELEMETRY_MS", Value: "1000"})
+	case "event":
+		return append(vars, corev1.EnvVar{Name: "EVENT_MS", Value: "1000"})
+	default:
+		return vars
+	}
 }
