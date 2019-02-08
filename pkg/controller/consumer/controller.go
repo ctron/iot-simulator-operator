@@ -142,6 +142,7 @@ func (r *ReconcileConsumer) configureService(consumer *simv1alpha1.SimulatorCons
 		Selector: map[string]string{
 			"app":              "simulator",
 			"deploymentconfig": "dc-" + existing.Name,
+			"metrics":          consumer.Spec.Simulator + "-iot-simulator",
 		},
 	}
 
