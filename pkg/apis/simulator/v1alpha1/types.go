@@ -27,12 +27,10 @@ type SimulatorConsumer struct {
 }
 
 type ConsumerSpec struct {
-	// the simulator instance
-	Simulator string `json:simulator`
-	// the Hono tenant
-	Tenant string `json:"tenant"`
-	// the name of the Secret which holds the messaging endpoint information
+	Simulator      string `json:"simulator"`
+	Tenant         string `json:"tenant"`
 	EndpointSecret string `json:"endpointSecret"`
+	Type           string `json:"type"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

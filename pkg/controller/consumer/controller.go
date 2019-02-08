@@ -135,15 +135,20 @@ func (r *ReconcileConsumer) reconcileService(request reconcile.Request, instance
 
 func (r *ReconcileConsumer) configureService(consumer *simv1alpha1.SimulatorConsumer, existing *v1.Service) {
 
-	existing.Spec = v1.ServiceSpec{
-		Ports: []corev1.ServicePort{
-			{Name: "metrics", Port: 8081, TargetPort: intstr.FromInt(8081)},
-		},
-		Selector: map[string]string{
-			"app":              utils.MakeHelmInstanceName(consumer),
-			"deploymentconfig": "dc-" + existing.Name,
-			"metrics":          utils.MakeHelmInstanceName(consumer),
-		},
+	if existing.ObjectMeta.Labels == nil {
+		existing.ObjectMeta.Labels = map[string]string{}
+	}
+
+	existing.ObjectMeta.Labels["app"] = utils.MakeHelmInstanceName(consumer)
+	existing.ObjectMeta.Labels["deploymentconfig"] = "dc-" + existing.Name
+	existing.ObjectMeta.Labels["metrics"] = utils.MakeHelmInstanceName(consumer)
+
+	existing.Spec.Ports = []corev1.ServicePort{
+		{Name: "metrics", Port: 8081, TargetPort: intstr.FromInt(8081)},
+	}
+	existing.Spec.Selector = map[string]string{
+		"app":              utils.MakeHelmInstanceName(consumer),
+		"deploymentconfig": "dc-" + existing.Name,
 	}
 
 }
@@ -171,66 +176,81 @@ func (r *ReconcileConsumer) reconcileDeploymentConfig(request reconcile.Request,
 
 func (r *ReconcileConsumer) configureDeploymentConfig(consumer *simv1alpha1.SimulatorConsumer, existing *appsv1.DeploymentConfig) {
 
-	sec := consumer.Spec.EndpointSecret
+	if existing.ObjectMeta.Labels == nil {
+		existing.ObjectMeta.Labels = map[string]string{}
+	}
 
-	existing.Spec = appsv1.DeploymentConfigSpec{
-		Replicas: 1,
-		Selector: map[string]string{
-			"app":              utils.MakeHelmInstanceName(consumer),
-			"deploymentconfig": "dc-" + existing.Name,
-		},
-		Strategy: appsv1.DeploymentStrategy{
-			Type: appsv1.DeploymentStrategyTypeRolling,
-		},
-		Template: &corev1.PodTemplateSpec{
-			ObjectMeta: metav1.ObjectMeta{
-				Labels: map[string]string{
-					"app":                  utils.MakeHelmInstanceName(consumer),
-					"deploymentconfig":     "dc-" + existing.Name,
-					"iot.simulator.tenant": consumer.Spec.Tenant,
-				},
-			},
-			Spec: corev1.PodSpec{
-				Containers: []corev1.Container{
-					{
-						Name:    "consumer",
-						Command: []string{"java", "-Xmx1024m", "-Dvertx.cacheDirBase=/tmp", "-Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.SLF4JLogDelegateFactory", "-jar", "/build/simulator-consumer/target/simulator-consumer-app.jar"},
-						Env: []v1.EnvVar{
-							{Name: "HONO_TRUSTED_CERTS", Value: "/etc/secrets/ca.crt"},
-							{Name: "HONO_INITIAL_CREDITS", Value: "100"},
-							{Name: "HONO_TENANT", ValueFrom: &v1.EnvVarSource{FieldRef: &v1.ObjectFieldSelector{APIVersion: "v1", FieldPath: "metadata.labels['iot.simulator.tenant']"}}},
-							{Name: "HONO_USER", ValueFrom: &v1.EnvVarSource{SecretKeyRef: &v1.SecretKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: sec}, Key: "endpoint.username"}}},
-							{Name: "HONO_PASSWORD", ValueFrom: &v1.EnvVarSource{SecretKeyRef: &v1.SecretKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: sec}, Key: "endpoint.password"}}},
-							{Name: "MESSAGING_SERVICE_HOST", ValueFrom: &v1.EnvVarSource{SecretKeyRef: &v1.SecretKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: sec}, Key: "endpoint.host"}}},
-							{Name: "MESSAGING_SERVICE_PORT_AMQP", ValueFrom: &v1.EnvVarSource{SecretKeyRef: &v1.SecretKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: sec}, Key: "endpoint.port"}}},
-						},
-						Ports: []v1.ContainerPort{
-							{ContainerPort: 8081, Name: "metrics"},
-						},
-						VolumeMounts: []corev1.VolumeMount{
-							{MountPath: "/etc/secrets", Name: "secrets-volume"},
-						},
-					},
-				},
-				Volumes: []corev1.Volume{
-					{Name: "secrets-volume", VolumeSource: corev1.VolumeSource{
-						Secret: &corev1.SecretVolumeSource{
-							SecretName: sec,
-						},
-					}},
-				},
-			},
-		},
-		Triggers: appsv1.DeploymentTriggerPolicies{
-			{Type: appsv1.DeploymentTriggerOnConfigChange},
-			{Type: appsv1.DeploymentTriggerOnImageChange, ImageChangeParams: &appsv1.DeploymentTriggerImageChangeParams{
-				Automatic:      true,
-				ContainerNames: []string{"consumer"},
-				From: v1.ObjectReference{
-					Kind: "ImageStreamTag",
-					Name: utils.MakeHelmInstanceName(consumer) + ":latest",
-				},
-			}},
+	sec := consumer.Spec.EndpointSecret
+	consumeType := consumer.Spec.Type
+	if consumeType == "" {
+		consumeType = "telemetry"
+	}
+
+	existing.ObjectMeta.Labels["app"] = utils.MakeHelmInstanceName(consumer)
+	existing.ObjectMeta.Labels["deploymentconfig"] = "dc-" + existing.Name
+
+	existing.Spec.Replicas = 1
+	existing.Spec.Selector = map[string]string{
+		"app":              utils.MakeHelmInstanceName(consumer),
+		"deploymentconfig": "dc-" + existing.Name,
+	}
+
+	existing.Spec.Strategy = appsv1.DeploymentStrategy{
+		Type: appsv1.DeploymentStrategyTypeRolling,
+	}
+
+	existing.Spec.Template.ObjectMeta = metav1.ObjectMeta{
+		Labels: map[string]string{
+			"app":                  utils.MakeHelmInstanceName(consumer),
+			"deploymentconfig":     "dc-" + existing.Name,
+			"iot.simulator.tenant": consumer.Spec.Tenant,
 		},
 	}
+
+	if len(existing.Spec.Template.Spec.Containers) != 1 {
+		existing.Spec.Template.Spec.Containers = make([]corev1.Container, 1)
+	}
+
+	existing.Spec.Template.Spec.Containers[0].Name = "consumer"
+	existing.Spec.Template.Spec.Containers[0].Command = []string{"java", "-Xmx1024m", "-Dvertx.cacheDirBase=/tmp", "-Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.SLF4JLogDelegateFactory", "-jar", "/build/simulator-consumer/target/simulator-consumer-app.jar"}
+	existing.Spec.Template.Spec.Containers[0].Env = []v1.EnvVar{
+		{Name: "CONSUMING", Value: consumeType},
+		{Name: "HONO_TRUSTED_CERTS", Value: "/etc/secrets/ca.crt"},
+		{Name: "HONO_INITIAL_CREDITS", Value: "100"},
+		{Name: "HONO_TENANT", ValueFrom: &v1.EnvVarSource{FieldRef: &v1.ObjectFieldSelector{APIVersion: "v1", FieldPath: "metadata.labels['iot.simulator.tenant']"}}},
+		{Name: "HONO_USER", ValueFrom: &v1.EnvVarSource{SecretKeyRef: &v1.SecretKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: sec}, Key: "endpoint.username"}}},
+		{Name: "HONO_PASSWORD", ValueFrom: &v1.EnvVarSource{SecretKeyRef: &v1.SecretKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: sec}, Key: "endpoint.password"}}},
+		{Name: "MESSAGING_SERVICE_HOST", ValueFrom: &v1.EnvVarSource{SecretKeyRef: &v1.SecretKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: sec}, Key: "endpoint.host"}}},
+		{Name: "MESSAGING_SERVICE_PORT_AMQP", ValueFrom: &v1.EnvVarSource{SecretKeyRef: &v1.SecretKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: sec}, Key: "endpoint.port"}}},
+	}
+	existing.Spec.Template.Spec.Containers[0].Ports = []v1.ContainerPort{
+		{ContainerPort: 8081, Name: "metrics"},
+	}
+	existing.Spec.Template.Spec.Containers[0].VolumeMounts = []corev1.VolumeMount{
+		{MountPath: "/etc/secrets", Name: "secrets-volume"},
+	}
+
+	if len(existing.Spec.Template.Spec.Volumes) != 1 {
+		existing.Spec.Template.Spec.Volumes = make([]corev1.Volume, 1)
+	}
+
+	existing.Spec.Template.Spec.Volumes[0].Name = "secrets-volume"
+	if existing.Spec.Template.Spec.Volumes[0].Secret == nil {
+		existing.Spec.Template.Spec.Volumes[0].Secret = &corev1.SecretVolumeSource{}
+	}
+	existing.Spec.Template.Spec.Volumes[0].Secret.SecretName = sec
+
+	if len(existing.Spec.Triggers) != 2 {
+		existing.Spec.Triggers = make([]appsv1.DeploymentTriggerPolicy, 2)
+	}
+
+	existing.Spec.Triggers[0].Type = appsv1.DeploymentTriggerOnConfigChange
+	existing.Spec.Triggers[1].Type = appsv1.DeploymentTriggerOnImageChange
+	existing.Spec.Triggers[1].ImageChangeParams.Automatic = true
+	existing.Spec.Triggers[1].ImageChangeParams.ContainerNames = []string{"consumer"}
+	existing.Spec.Triggers[1].ImageChangeParams.From = v1.ObjectReference{
+		Kind: "ImageStreamTag",
+		Name: utils.MakeHelmInstanceName(consumer) + "-parent:latest",
+	}
+
 }
