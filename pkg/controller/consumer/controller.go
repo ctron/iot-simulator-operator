@@ -191,7 +191,8 @@ func (r *ReconcileConsumer) configureDeploymentConfig(consumer *simv1alpha1.Simu
 	existing.ObjectMeta.Labels["deploymentconfig"] = "dc-" + existing.Name
 	existing.ObjectMeta.Labels["iot.simulator.tenant"] = consumer.Spec.Tenant
 	existing.ObjectMeta.Labels["iot.simulator"] = consumer.Spec.Simulator
-	existing.ObjectMeta.Labels["iot.simulator.consume.type"] = consumer.Spec.Type
+	existing.ObjectMeta.Labels["iot.simulator.app"] = "consumer"
+	existing.ObjectMeta.Labels["iot.simulator.consume.type"] = consumeType
 
 	existing.Spec.Replicas = 1
 	existing.Spec.Selector = map[string]string{
