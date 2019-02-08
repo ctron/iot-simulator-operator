@@ -56,13 +56,13 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	err = c.Watch(&source.Kind{Type: &simv1alpha1.SimulationConsumer{}}, &handler.EnqueueRequestForObject{})
+	err = c.Watch(&source.Kind{Type: &simv1alpha1.SimulatorConsumer{}}, &handler.EnqueueRequestForObject{})
 	if err != nil {
 		return err
 	}
 
 	err = c.Watch(&source.Kind{Type: &appsv1.DeploymentConfig{}}, &handler.EnqueueRequestForOwner{
-		IsController: true, OwnerType: &simv1alpha1.SimulationConsumer{},
+		IsController: true, OwnerType: &simv1alpha1.SimulatorConsumer{},
 	})
 	if err != nil {
 		return err
@@ -85,7 +85,7 @@ func (r *ReconcileConsumer) Reconcile(request reconcile.Request) (reconcile.Resu
 	reqLogger.Info("Reconciling Consumer")
 
 	// Fetch the Consumer instance
-	instance := &simv1alpha1.SimulationConsumer{}
+	instance := &simv1alpha1.SimulatorConsumer{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -111,7 +111,7 @@ func (r *ReconcileConsumer) Reconcile(request reconcile.Request) (reconcile.Resu
 	return reconcile.Result{}, nil
 }
 
-func (r *ReconcileConsumer) reconcileService(request reconcile.Request, instance *simv1alpha1.SimulationConsumer) error {
+func (r *ReconcileConsumer) reconcileService(request reconcile.Request, instance *simv1alpha1.SimulatorConsumer) error {
 
 	svc := v1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -133,7 +133,7 @@ func (r *ReconcileConsumer) reconcileService(request reconcile.Request, instance
 	return err
 }
 
-func (r *ReconcileConsumer) configureService(consumer *simv1alpha1.SimulationConsumer, existing *v1.Service) {
+func (r *ReconcileConsumer) configureService(consumer *simv1alpha1.SimulatorConsumer, existing *v1.Service) {
 
 	existing.Spec = v1.ServiceSpec{
 		Ports: []corev1.ServicePort{
@@ -147,7 +147,7 @@ func (r *ReconcileConsumer) configureService(consumer *simv1alpha1.SimulationCon
 
 }
 
-func (r *ReconcileConsumer) reconcileDeploymentConfig(request reconcile.Request, instance *simv1alpha1.SimulationConsumer) error {
+func (r *ReconcileConsumer) reconcileDeploymentConfig(request reconcile.Request, instance *simv1alpha1.SimulatorConsumer) error {
 	dc := appsv1.DeploymentConfig{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "sim-consumer-" + request.Name,
@@ -168,7 +168,7 @@ func (r *ReconcileConsumer) reconcileDeploymentConfig(request reconcile.Request,
 	return err
 }
 
-func (r *ReconcileConsumer) configureDeploymentConfig(consumer *simv1alpha1.SimulationConsumer, existing *appsv1.DeploymentConfig) {
+func (r *ReconcileConsumer) configureDeploymentConfig(consumer *simv1alpha1.SimulatorConsumer, existing *appsv1.DeploymentConfig) {
 
 	sec := consumer.Spec.EndpointSecret
 

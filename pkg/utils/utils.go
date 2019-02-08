@@ -19,7 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-func SetOwnerReference(instance *v1alpha1.SimulationConsumer, existingObject runtime.Object) {
+func SetOwnerReference(instance *v1alpha1.SimulatorConsumer, existingObject runtime.Object) {
 
 	// we need to roll our own logic here, since we do not want
 	// to set blockOwnerDeletion to TRUE

@@ -19,7 +19,7 @@ import (
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +k8s:openapi-gen=true
-type SimulationConsumer struct {
+type SimulatorConsumer struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
@@ -27,23 +27,27 @@ type SimulationConsumer struct {
 }
 
 type ConsumerSpec struct {
-	Tenant         string `json:"tenant"`
+	// the simulator instance
+	Simulator string `json:simulator`
+	// the Hono tenant
+	Tenant string `json:"tenant"`
+	// the name of the Secret which holds the messaging endpoint information
 	EndpointSecret string `json:"endpointSecret"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-type SimulationConsumerList struct {
+type SimulatorConsumerList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []SimulationConsumer `json:"items"`
+	Items           []SimulatorConsumer `json:"items"`
 }
 
 // init
 
 func init() {
 	SchemeBuilder.Register(
-		&SimulationConsumer{},
-		&SimulationConsumerList{},
+		&SimulatorConsumer{},
+		&SimulatorConsumerList{},
 	)
 }
