@@ -22,7 +22,7 @@ type CommonSpec struct {
 	Tenant    string `json:"tenant"`
 	Type      string `json:"type"`
 
-	EndpointConfig string `json:"endpointConfig"`
+	EndpointSettings string `json:"endpointSettings"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

@@ -185,7 +185,7 @@ func (r *ReconcileConsumer) configureDeploymentConfig(consumer *simv1alpha1.Simu
 		existing.ObjectMeta.Labels = map[string]string{}
 	}
 
-	endpointConfigName := consumer.Spec.EndpointConfig
+	endpointConfigName := consumer.Spec.EndpointSettings
 	messageType := consumer.Spec.Type
 	if messageType == "" {
 		messageType = "telemetry"
@@ -211,11 +211,11 @@ func (r *ReconcileConsumer) configureDeploymentConfig(consumer *simv1alpha1.Simu
 	}
 	existing.Spec.Template.ObjectMeta = metav1.ObjectMeta{
 		Labels: map[string]string{
-			"app":                          utils.MakeHelmInstanceName(consumer),
-			"deploymentconfig":             utils.DeploymentConfigName("con", existing),
-			"iot.simulator.tenant":         consumer.Spec.Tenant,
-			"iot.simulator":                consumer.Spec.Simulator,
-			"iot.simulator.endpointConfig": consumer.Spec.EndpointConfig,
+			"app":                    utils.MakeHelmInstanceName(consumer),
+			"deploymentconfig":       utils.DeploymentConfigName("con", existing),
+			"iot.simulator.tenant":   consumer.Spec.Tenant,
+			"iot.simulator":          consumer.Spec.Simulator,
+			"iot.simulator.settings": consumer.Spec.EndpointSettings,
 		},
 	}
 
