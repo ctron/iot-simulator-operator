@@ -212,10 +212,11 @@ func (r *ReconcileProducer) configureDeploymentConfig(producer *simv1alpha1.Simu
 	}
 	existing.Spec.Template.ObjectMeta = metav1.ObjectMeta{
 		Labels: map[string]string{
-			"app":                  utils.MakeHelmInstanceName(producer),
-			"deploymentconfig":     utils.DeploymentConfigName("prod", existing),
-			"iot.simulator.tenant": producer.Spec.Tenant,
-			"iot.simulator":        producer.Spec.Simulator,
+			"app":                          utils.MakeHelmInstanceName(producer),
+			"deploymentconfig":             utils.DeploymentConfigName("prod", existing),
+			"iot.simulator.tenant":         producer.Spec.Tenant,
+			"iot.simulator":                producer.Spec.Simulator,
+			"iot.simulator.endpointConfig": producer.Spec.EndpointConfig,
 		},
 	}
 
