@@ -185,7 +185,7 @@ func (r *ReconcileConsumer) configureDeploymentConfig(consumer *simv1alpha1.Simu
 		existing.ObjectMeta.Labels = map[string]string{}
 	}
 
-	sec := consumer.Spec.EndpointSecret
+	endpointConfigName := consumer.Spec.EndpointConfig
 	messageType := consumer.Spec.Type
 	if messageType == "" {
 		messageType = "telemetry"
@@ -229,10 +229,10 @@ func (r *ReconcileConsumer) configureDeploymentConfig(consumer *simv1alpha1.Simu
 		{Name: "HONO_TRUSTED_CERTS", Value: "/etc/secrets/ca.crt"},
 		{Name: "HONO_INITIAL_CREDITS", Value: "100"},
 		{Name: "HONO_TENANT", ValueFrom: &v1.EnvVarSource{FieldRef: &v1.ObjectFieldSelector{APIVersion: "v1", FieldPath: "metadata.labels['iot.simulator.tenant']"}}},
-		{Name: "HONO_USER", ValueFrom: &v1.EnvVarSource{SecretKeyRef: &v1.SecretKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: sec}, Key: "endpoint.username"}}},
-		{Name: "HONO_PASSWORD", ValueFrom: &v1.EnvVarSource{SecretKeyRef: &v1.SecretKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: sec}, Key: "endpoint.password"}}},
-		{Name: "MESSAGING_SERVICE_HOST", ValueFrom: &v1.EnvVarSource{SecretKeyRef: &v1.SecretKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: sec}, Key: "endpoint.host"}}},
-		{Name: "MESSAGING_SERVICE_PORT_AMQP", ValueFrom: &v1.EnvVarSource{SecretKeyRef: &v1.SecretKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: sec}, Key: "endpoint.port"}}},
+		{Name: "HONO_USER", ValueFrom: &v1.EnvVarSource{SecretKeyRef: &v1.SecretKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: endpointConfigName}, Key: "endpoint.username"}}},
+		{Name: "HONO_PASSWORD", ValueFrom: &v1.EnvVarSource{SecretKeyRef: &v1.SecretKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: endpointConfigName}, Key: "endpoint.password"}}},
+		{Name: "MESSAGING_SERVICE_HOST", ValueFrom: &v1.EnvVarSource{ConfigMapKeyRef: &v1.ConfigMapKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: endpointConfigName}, Key: "endpoint.host"}}},
+		{Name: "MESSAGING_SERVICE_PORT_AMQP", ValueFrom: &v1.EnvVarSource{ConfigMapKeyRef: &v1.ConfigMapKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: endpointConfigName}, Key: "endpoint.port"}}},
 	}
 	existing.Spec.Template.Spec.Containers[0].Ports = []v1.ContainerPort{
 		{ContainerPort: 8081, Name: "metrics"},
@@ -249,7 +249,7 @@ func (r *ReconcileConsumer) configureDeploymentConfig(consumer *simv1alpha1.Simu
 	if existing.Spec.Template.Spec.Volumes[0].Secret == nil {
 		existing.Spec.Template.Spec.Volumes[0].Secret = &corev1.SecretVolumeSource{}
 	}
-	existing.Spec.Template.Spec.Volumes[0].Secret.SecretName = sec
+	existing.Spec.Template.Spec.Volumes[0].Secret.SecretName = endpointConfigName
 
 	if len(existing.Spec.Triggers) != 2 {
 		existing.Spec.Triggers = make([]appsv1.DeploymentTriggerPolicy, 2)

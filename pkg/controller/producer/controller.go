@@ -186,7 +186,7 @@ func (r *ReconcileProducer) configureDeploymentConfig(producer *simv1alpha1.Simu
 		existing.ObjectMeta.Labels = map[string]string{}
 	}
 
-	sec := producer.Spec.EndpointSecret
+	endpointConfigName := producer.Spec.EndpointConfig
 	messageType := producer.Spec.Type
 	if messageType == "" {
 		messageType = "telemetry"
@@ -229,10 +229,10 @@ func (r *ReconcileProducer) configureDeploymentConfig(producer *simv1alpha1.Simu
 		{Name: "NUM_DEVICES", Value: strconv.FormatUint(uint64(producer.Spec.NumberOfDevices), 10)},
 		{Name: "HONO_TENANT", ValueFrom: &v1.EnvVarSource{FieldRef: &v1.ObjectFieldSelector{APIVersion: "v1", FieldPath: "metadata.labels['iot.simulator.tenant']"}}},
 
-		{Name: "DEVICE_REGISTRY_URL", ValueFrom: &v1.EnvVarSource{SecretKeyRef: &v1.SecretKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: sec}, Key: "deviceRegistry.url"}}},
+		{Name: "DEVICE_REGISTRY_URL", ValueFrom: &v1.EnvVarSource{ConfigMapKeyRef: &v1.ConfigMapKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: endpointConfigName}, Key: "deviceRegistry.url"}}},
 	}
 
-	existing.Spec.Template.Spec.Containers[0].Env = append(existing.Spec.Template.Spec.Containers[0].Env, httpVariables(sec)...)
+	existing.Spec.Template.Spec.Containers[0].Env = append(existing.Spec.Template.Spec.Containers[0].Env, httpVariables(endpointConfigName)...)
 
 	existing.Spec.Template.Spec.Containers[0].Ports = []v1.ContainerPort{
 		{ContainerPort: 8081, Name: "metrics"},
@@ -257,10 +257,10 @@ func (r *ReconcileProducer) configureDeploymentConfig(producer *simv1alpha1.Simu
 	}
 
 	// not apply http specifics
-	r.configureHttp(producer, existing, messageType, sec)
+	r.configureHttp(producer, existing, messageType)
 }
 
-func (r *ReconcileProducer) configureHttp(producer *simv1alpha1.SimulatorProducer, existing *appsv1.DeploymentConfig, messageType string, sec string) {
+func (r *ReconcileProducer) configureHttp(producer *simv1alpha1.SimulatorProducer, existing *appsv1.DeploymentConfig, messageType string) {
 
 	existing.ObjectMeta.Labels["iot.simulator.producer.protocol"] = "http"
 
@@ -276,7 +276,7 @@ func (r *ReconcileProducer) configureHttp(producer *simv1alpha1.SimulatorProduce
 func httpVariables(sec string) []corev1.EnvVar {
 
 	return []v1.EnvVar{
-		{Name: "HONO_HTTP_URL", ValueFrom: &v1.EnvVarSource{SecretKeyRef: &v1.SecretKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: sec}, Key: "httpAdapter.url"}}},
+		{Name: "HONO_HTTP_URL", ValueFrom: &v1.EnvVarSource{ConfigMapKeyRef: &v1.ConfigMapKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: sec}, Key: "httpAdapter.url"}}},
 		{Name: "DEVICE_PROVIDER", Value: "VERTX"},
 		{Name: "VERTX_POOLED_BUFFERS", Value: "true"},
 		{Name: "VERTX_RECREATE_CLIENT", Value: "120000"},
