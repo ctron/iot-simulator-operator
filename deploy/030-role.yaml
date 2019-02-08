@@ -3,12 +3,9 @@ kind: Role
 metadata:
   name: iot-simulator-operator
 rules:
-- apiGroups:
-    - ""
-  resources:
-    - configmaps
-  verbs:
-    - '*'
+- apiGroups: [ "" ]
+  resources: [ "configmaps", "secrets", "pods" ]
+  verbs: [ "*" ]
 - apiGroups: [ "apps.openshift.io" ]
   resources: [ "deploymentconfigs" ]
   verbs: [ '*' ]

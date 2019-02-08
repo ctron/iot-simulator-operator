@@ -16,10 +16,6 @@ package config
 import (
 	"context"
 
-	"k8s.io/apimachinery/pkg/selection"
-
-	"k8s.io/apimachinery/pkg/labels"
-
 	"k8s.io/api/core/v1"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -80,17 +76,15 @@ func (r *ReconcileConfiguration) Reconcile(request reconcile.Request) (reconcile
 		Namespace: request.Namespace, // we only search in the same namespace
 	}
 
-	req, err := labels.NewRequirement("iot.simulator.settings", selection.Equals, []string{request.Name})
-
-	if err != nil {
+	if err := opts.SetLabelSelector("iot.simulator.settings=" + request.Name); err != nil {
 		return reconcile.Result{}, err
 	}
-
-	opts.LabelSelector.Add(*req)
 
 	if err := r.client.List(context.TODO(), opts, items); err != nil {
 		return reconcile.Result{}, err
 	}
+
+	var err error
 
 	for _, pod := range items.Items {
 
