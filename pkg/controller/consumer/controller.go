@@ -142,6 +142,7 @@ func (r *ReconcileConsumer) configureService(consumer *simv1alpha1.SimulatorCons
 	existing.ObjectMeta.Labels["app"] = utils.MakeHelmInstanceName(consumer)
 	existing.ObjectMeta.Labels["deploymentconfig"] = "dc-" + existing.Name
 	existing.ObjectMeta.Labels["metrics"] = utils.MakeHelmInstanceName(consumer)
+	existing.ObjectMeta.Labels["iot.simulator"] = consumer.Spec.Simulator
 
 	existing.Spec.Ports = []corev1.ServicePort{
 		{Name: "metrics", Port: 8081, TargetPort: intstr.FromInt(8081)},
@@ -188,6 +189,9 @@ func (r *ReconcileConsumer) configureDeploymentConfig(consumer *simv1alpha1.Simu
 
 	existing.ObjectMeta.Labels["app"] = utils.MakeHelmInstanceName(consumer)
 	existing.ObjectMeta.Labels["deploymentconfig"] = "dc-" + existing.Name
+	existing.ObjectMeta.Labels["iot.simulator.tenant"] = consumer.Spec.Tenant
+	existing.ObjectMeta.Labels["iot.simulator"] = consumer.Spec.Simulator
+	existing.ObjectMeta.Labels["iot.simulator.consume.type"] = consumer.Spec.Type
 
 	existing.Spec.Replicas = 1
 	existing.Spec.Selector = map[string]string{
@@ -204,6 +208,7 @@ func (r *ReconcileConsumer) configureDeploymentConfig(consumer *simv1alpha1.Simu
 			"app":                  utils.MakeHelmInstanceName(consumer),
 			"deploymentconfig":     "dc-" + existing.Name,
 			"iot.simulator.tenant": consumer.Spec.Tenant,
+			"iot.simulator":        consumer.Spec.Simulator,
 		},
 	}
 
