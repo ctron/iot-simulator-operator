@@ -140,9 +140,9 @@ func (r *ReconcileConsumer) configureService(consumer *simv1alpha1.SimulatorCons
 			{Name: "metrics", Port: 8081, TargetPort: intstr.FromInt(8081)},
 		},
 		Selector: map[string]string{
-			"app":              "simulator",
+			"app":              utils.MakeHelmInstanceName(consumer),
 			"deploymentconfig": "dc-" + existing.Name,
-			"metrics":          consumer.Spec.Simulator + "-iot-simulator",
+			"metrics":          utils.MakeHelmInstanceName(consumer),
 		},
 	}
 
@@ -176,7 +176,7 @@ func (r *ReconcileConsumer) configureDeploymentConfig(consumer *simv1alpha1.Simu
 	existing.Spec = appsv1.DeploymentConfigSpec{
 		Replicas: 1,
 		Selector: map[string]string{
-			"app":              "simulator",
+			"app":              utils.MakeHelmInstanceName(consumer),
 			"deploymentconfig": "dc-" + existing.Name,
 		},
 		Strategy: appsv1.DeploymentStrategy{
@@ -185,7 +185,7 @@ func (r *ReconcileConsumer) configureDeploymentConfig(consumer *simv1alpha1.Simu
 		Template: &corev1.PodTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{
 				Labels: map[string]string{
-					"app":                  "simulator",
+					"app":                  utils.MakeHelmInstanceName(consumer),
 					"deploymentconfig":     "dc-" + existing.Name,
 					"iot.simulator.tenant": consumer.Spec.Tenant,
 				},
@@ -228,7 +228,7 @@ func (r *ReconcileConsumer) configureDeploymentConfig(consumer *simv1alpha1.Simu
 				ContainerNames: []string{"consumer"},
 				From: v1.ObjectReference{
 					Kind: "ImageStreamTag",
-					Name: "simulator-parent:latest",
+					Name: utils.MakeHelmInstanceName(consumer) + ":latest",
 				},
 			}},
 		},

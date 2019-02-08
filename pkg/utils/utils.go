@@ -38,3 +38,7 @@ func SetOwnerReference(instance *v1alpha1.SimulatorConsumer, existingObject runt
 	}
 
 }
+
+func MakeHelmInstanceName(consumer *v1alpha1.SimulatorConsumer) string {
+	return consumer.Spec.Simulator + "-iot-simulator"
+}
