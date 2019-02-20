@@ -115,7 +115,7 @@ func (r *ReconcileConsumer) reconcileService(request reconcile.Request, instance
 
 	svc := v1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "sim-consumer-" + request.Name,
+			Name:      utils.DeploymentConfigName("con", instance),
 			Namespace: request.Namespace,
 		},
 	}
@@ -151,7 +151,7 @@ func (r *ReconcileConsumer) configureService(consumer *simv1alpha1.SimulatorCons
 	}
 	existing.Spec.Selector = map[string]string{
 		"app":              utils.MakeHelmInstanceName(consumer),
-		"deploymentconfig": utils.DeploymentConfigName("con", existing),
+		"deploymentconfig": existing.Name,
 	}
 
 }
@@ -159,7 +159,7 @@ func (r *ReconcileConsumer) configureService(consumer *simv1alpha1.SimulatorCons
 func (r *ReconcileConsumer) reconcileDeploymentConfig(request reconcile.Request, instance *simv1alpha1.SimulatorConsumer) error {
 	dc := appsv1.DeploymentConfig{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "sim-consumer-" + request.Name,
+			Name:      utils.DeploymentConfigName("con", instance),
 			Namespace: request.Namespace,
 		},
 	}
@@ -241,6 +241,8 @@ func (r *ReconcileConsumer) configureDeploymentConfig(consumer *simv1alpha1.Simu
 	existing.Spec.Template.Spec.Containers[0].VolumeMounts = []corev1.VolumeMount{
 		{MountPath: "/etc/secrets", Name: "secrets-volume"},
 	}
+	existing.Spec.Template.Spec.Containers[0].LivenessProbe = applyProbe(existing.Spec.Template.Spec.Containers[0].LivenessProbe)
+	existing.Spec.Template.Spec.Containers[0].ReadinessProbe = applyProbe(existing.Spec.Template.Spec.Containers[0].ReadinessProbe)
 
 	if len(existing.Spec.Template.Spec.Volumes) != 1 {
 		existing.Spec.Template.Spec.Volumes = make([]corev1.Volume, 1)
@@ -251,6 +253,8 @@ func (r *ReconcileConsumer) configureDeploymentConfig(consumer *simv1alpha1.Simu
 		existing.Spec.Template.Spec.Volumes[0].Secret = &corev1.SecretVolumeSource{}
 	}
 	existing.Spec.Template.Spec.Volumes[0].Secret.SecretName = endpointConfigName
+
+	// triggers
 
 	if len(existing.Spec.Triggers) != 2 {
 		existing.Spec.Triggers = make([]appsv1.DeploymentTriggerPolicy, 2)
@@ -268,4 +272,18 @@ func (r *ReconcileConsumer) configureDeploymentConfig(consumer *simv1alpha1.Simu
 		Name: utils.MakeHelmInstanceName(consumer) + "-parent:latest",
 	}
 
+}
+
+func applyProbe(probe *corev1.Probe) *corev1.Probe {
+	if probe == nil {
+		probe = &corev1.Probe{}
+	}
+	probe.Exec = nil
+	probe.TCPSocket = nil
+	probe.HTTPGet = &corev1.HTTPGetAction{
+		Path:   "/health",
+		Port:   intstr.FromInt(8081),
+		Scheme: corev1.URISchemeHTTP,
+	}
+	return probe
 }

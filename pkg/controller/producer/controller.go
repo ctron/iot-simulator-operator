@@ -116,7 +116,7 @@ func (r *ReconcileProducer) reconcileService(request reconcile.Request, instance
 
 	svc := v1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "sim-producer-" + request.Name,
+			Name:      utils.DeploymentConfigName("prod", instance),
 			Namespace: request.Namespace,
 		},
 	}
@@ -139,7 +139,7 @@ func (r *ReconcileProducer) reconcileService(request reconcile.Request, instance
 func (r *ReconcileProducer) reconcileDeploymentConfig(request reconcile.Request, instance *simv1alpha1.SimulatorProducer) error {
 	dc := appsv1.DeploymentConfig{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "sim-producer-" + request.Name,
+			Name:      utils.DeploymentConfigName("prod", instance),
 			Namespace: request.Namespace,
 		},
 	}
@@ -175,7 +175,7 @@ func (r *ReconcileProducer) configureService(producer *simv1alpha1.SimulatorProd
 	}
 	existing.Spec.Selector = map[string]string{
 		"app":              utils.MakeHelmInstanceName(producer),
-		"deploymentconfig": utils.DeploymentConfigName("prod", existing),
+		"deploymentconfig": existing.Name,
 	}
 
 }
