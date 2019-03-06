@@ -147,7 +147,10 @@ func (r *ReconcileConsumer) configureService(consumer *simv1alpha1.SimulatorCons
 	existing.ObjectMeta.Labels["iot.simulator"] = consumer.Spec.Simulator
 
 	existing.Spec.Ports = []corev1.ServicePort{
-		{Name: "metrics", Port: 8081, TargetPort: intstr.FromInt(8081)},
+		{
+			Name: "metrics",
+			Port: 8081, TargetPort: intstr.FromInt(8081),
+		},
 	}
 	existing.Spec.Selector = map[string]string{
 		"app":              utils.MakeHelmInstanceName(consumer),
@@ -209,15 +212,18 @@ func (r *ReconcileConsumer) configureDeploymentConfig(consumer *simv1alpha1.Simu
 	if existing.Spec.Template == nil {
 		existing.Spec.Template = &v1.PodTemplateSpec{}
 	}
-	existing.Spec.Template.ObjectMeta = metav1.ObjectMeta{
-		Labels: map[string]string{
-			"app":                    utils.MakeHelmInstanceName(consumer),
-			"deploymentconfig":       utils.DeploymentConfigName("con", existing),
-			"iot.simulator.tenant":   consumer.Spec.Tenant,
-			"iot.simulator":          consumer.Spec.Simulator,
-			"iot.simulator.settings": consumer.Spec.EndpointSettings,
-		},
+
+	if existing.Spec.Template.ObjectMeta.Labels == nil {
+		existing.Spec.Template.ObjectMeta.Labels = make(map[string]string)
 	}
+
+	existing.Spec.Template.ObjectMeta.Labels["app"] = utils.MakeHelmInstanceName(consumer)
+	existing.Spec.Template.ObjectMeta.Labels["deploymentconfig"] = utils.DeploymentConfigName("con", existing)
+	existing.Spec.Template.ObjectMeta.Labels["iot.simulator.tenant"] = consumer.Spec.Tenant
+	existing.Spec.Template.ObjectMeta.Labels["iot.simulator"] = consumer.Spec.Simulator
+	existing.Spec.Template.ObjectMeta.Labels["iot.simulator.settings"] = consumer.Spec.EndpointSettings
+
+	// container
 
 	if len(existing.Spec.Template.Spec.Containers) != 1 {
 		existing.Spec.Template.Spec.Containers = make([]corev1.Container, 1)
@@ -236,13 +242,22 @@ func (r *ReconcileConsumer) configureDeploymentConfig(consumer *simv1alpha1.Simu
 		{Name: "MESSAGING_SERVICE_PORT_AMQP", ValueFrom: &v1.EnvVarSource{ConfigMapKeyRef: &v1.ConfigMapKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: endpointConfigName}, Key: "endpoint.port"}}},
 	}
 	existing.Spec.Template.Spec.Containers[0].Ports = []v1.ContainerPort{
-		{ContainerPort: 8081, Name: "metrics"},
+		{
+			ContainerPort: 8081,
+			Name:          "metrics",
+			Protocol:      corev1.ProtocolTCP,
+		},
 	}
 	existing.Spec.Template.Spec.Containers[0].VolumeMounts = []corev1.VolumeMount{
-		{MountPath: "/etc/secrets", Name: "secrets-volume"},
+		{
+			MountPath: "/etc/secrets",
+			Name:      "secrets-volume",
+		},
 	}
 	existing.Spec.Template.Spec.Containers[0].LivenessProbe = applyProbe(existing.Spec.Template.Spec.Containers[0].LivenessProbe)
 	existing.Spec.Template.Spec.Containers[0].ReadinessProbe = applyProbe(existing.Spec.Template.Spec.Containers[0].ReadinessProbe)
+
+	// volumes
 
 	if len(existing.Spec.Template.Spec.Volumes) != 1 {
 		existing.Spec.Template.Spec.Volumes = make([]corev1.Volume, 1)
@@ -267,10 +282,8 @@ func (r *ReconcileConsumer) configureDeploymentConfig(consumer *simv1alpha1.Simu
 	}
 	existing.Spec.Triggers[1].ImageChangeParams.Automatic = true
 	existing.Spec.Triggers[1].ImageChangeParams.ContainerNames = []string{"consumer"}
-	existing.Spec.Triggers[1].ImageChangeParams.From = v1.ObjectReference{
-		Kind: "ImageStreamTag",
-		Name: utils.MakeHelmInstanceName(consumer) + "-parent:latest",
-	}
+	existing.Spec.Triggers[1].ImageChangeParams.From.Kind = "ImageStreamTag"
+	existing.Spec.Triggers[1].ImageChangeParams.From.Name = utils.MakeHelmInstanceName(consumer) + "-parent:latest"
 
 }
 

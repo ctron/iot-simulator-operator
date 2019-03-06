@@ -16,6 +16,8 @@ package config
 import (
 	"context"
 
+	"go.uber.org/multierr"
+
 	"k8s.io/api/core/v1"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -89,7 +91,7 @@ func (r *ReconcileConfiguration) Reconcile(request reconcile.Request) (reconcile
 	for _, pod := range items.Items {
 
 		if e2 := r.client.Delete(context.TODO(), pod.DeepCopyObject()); e2 != nil {
-			err = e2
+			err = multierr.Append(err, e2)
 		}
 
 	}

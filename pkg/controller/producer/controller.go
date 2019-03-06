@@ -171,7 +171,11 @@ func (r *ReconcileProducer) configureService(producer *simv1alpha1.SimulatorProd
 	existing.ObjectMeta.Labels["iot.simulator"] = producer.Spec.Simulator
 
 	existing.Spec.Ports = []corev1.ServicePort{
-		{Name: "metrics", Port: 8081, TargetPort: intstr.FromInt(8081)},
+		{
+			Name:       "metrics",
+			Port:       8081,
+			TargetPort: intstr.FromInt(8081),
+		},
 	}
 	existing.Spec.Selector = map[string]string{
 		"app":              utils.MakeHelmInstanceName(producer),
@@ -210,15 +214,18 @@ func (r *ReconcileProducer) configureDeploymentConfig(producer *simv1alpha1.Simu
 	if existing.Spec.Template == nil {
 		existing.Spec.Template = &v1.PodTemplateSpec{}
 	}
-	existing.Spec.Template.ObjectMeta = metav1.ObjectMeta{
-		Labels: map[string]string{
-			"app":                    utils.MakeHelmInstanceName(producer),
-			"deploymentconfig":       utils.DeploymentConfigName("prod", existing),
-			"iot.simulator.tenant":   producer.Spec.Tenant,
-			"iot.simulator":          producer.Spec.Simulator,
-			"iot.simulator.settings": producer.Spec.EndpointSettings,
-		},
+
+	if existing.Spec.Template.ObjectMeta.Labels == nil {
+		existing.Spec.Template.ObjectMeta.Labels = make(map[string]string)
 	}
+
+	existing.Spec.Template.ObjectMeta.Labels["app"] = utils.MakeHelmInstanceName(producer)
+	existing.Spec.Template.ObjectMeta.Labels["deploymentconfig"] = utils.DeploymentConfigName("prod", existing)
+	existing.Spec.Template.ObjectMeta.Labels["iot.simulator.tenant"] = producer.Spec.Tenant
+	existing.Spec.Template.ObjectMeta.Labels["iot.simulator"] = producer.Spec.Simulator
+	existing.Spec.Template.ObjectMeta.Labels["iot.simulator.settings"] = producer.Spec.EndpointSettings
+
+	// containers
 
 	if len(existing.Spec.Template.Spec.Containers) != 1 {
 		existing.Spec.Template.Spec.Containers = make([]corev1.Container, 1)
@@ -236,7 +243,11 @@ func (r *ReconcileProducer) configureDeploymentConfig(producer *simv1alpha1.Simu
 	existing.Spec.Template.Spec.Containers[0].Env = append(existing.Spec.Template.Spec.Containers[0].Env, httpVariables(endpointConfigName)...)
 
 	existing.Spec.Template.Spec.Containers[0].Ports = []v1.ContainerPort{
-		{ContainerPort: 8081, Name: "metrics"},
+		{
+			ContainerPort: 8081,
+			Name:          "metrics",
+			Protocol:      corev1.ProtocolTCP,
+		},
 	}
 
 	// triggers
@@ -252,12 +263,10 @@ func (r *ReconcileProducer) configureDeploymentConfig(producer *simv1alpha1.Simu
 	}
 	existing.Spec.Triggers[1].ImageChangeParams.Automatic = true
 	existing.Spec.Triggers[1].ImageChangeParams.ContainerNames = []string{"producer"}
-	existing.Spec.Triggers[1].ImageChangeParams.From = v1.ObjectReference{
-		Kind: "ImageStreamTag",
-		Name: utils.MakeHelmInstanceName(producer) + "-parent:latest",
-	}
+	existing.Spec.Triggers[1].ImageChangeParams.From.Kind = "ImageStreamTag"
+	existing.Spec.Triggers[1].ImageChangeParams.From.Name = utils.MakeHelmInstanceName(producer) + "-parent:latest"
 
-	// not apply http specifics
+	// now apply http specifics
 	r.configureHttp(producer, existing, messageType)
 }
 
