@@ -58,6 +58,11 @@ func (in *ConsumerSpec) DeepCopy() *ConsumerSpec {
 func (in *ProducerSpec) DeepCopyInto(out *ProducerSpec) {
 	*out = *in
 	out.CommonSpec = in.CommonSpec
+	if in.NumberOfThreads != nil {
+		in, out := &in.NumberOfThreads, &out.NumberOfThreads
+		*out = new(uint32)
+		**out = **in
+	}
 	return
 }
 
@@ -136,7 +141,7 @@ func (in *SimulatorProducer) DeepCopyInto(out *SimulatorProducer) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
 	in.ObjectMeta.DeepCopyInto(&out.ObjectMeta)
-	out.Spec = in.Spec
+	in.Spec.DeepCopyInto(&out.Spec)
 	return
 }
 

@@ -42,6 +42,8 @@ import (
 
 var log = logf.Log.WithName("controller_producer")
 
+var TRUE = true
+
 func Add(mgr manager.Manager) error {
 	return add(mgr, newReconciler(mgr))
 }
@@ -195,6 +197,10 @@ func (r *ReconcileProducer) configureDeploymentConfig(producer *simv1alpha1.Simu
 	if messageType == "" {
 		messageType = "telemetry"
 	}
+	protocol := producer.Spec.Protocol
+	if protocol == "" {
+		protocol = simv1alpha1.ProtocolHttp
+	}
 
 	existing.ObjectMeta.Labels["app"] = utils.MakeHelmInstanceName(producer)
 	existing.ObjectMeta.Labels["deploymentconfig"] = utils.DeploymentConfigName("prod", existing)
@@ -202,8 +208,9 @@ func (r *ReconcileProducer) configureDeploymentConfig(producer *simv1alpha1.Simu
 	existing.ObjectMeta.Labels["iot.simulator"] = producer.Spec.Simulator
 	existing.ObjectMeta.Labels["iot.simulator.app"] = "producer"
 	existing.ObjectMeta.Labels["iot.simulator.message.type"] = messageType
+	existing.ObjectMeta.Labels["iot.simulator.producer.protocol"] = string(protocol)
 
-	existing.Spec.Replicas = 1
+	existing.Spec.Replicas = producer.Spec.Replicas
 	existing.Spec.Selector = map[string]string{
 		"app":              utils.MakeHelmInstanceName(producer),
 		"deploymentconfig": utils.DeploymentConfigName("prod", existing),
@@ -238,9 +245,14 @@ func (r *ReconcileProducer) configureDeploymentConfig(producer *simv1alpha1.Simu
 		{Name: "HONO_TENANT", ValueFrom: &v1.EnvVarSource{FieldRef: &v1.ObjectFieldSelector{APIVersion: "v1", FieldPath: "metadata.labels['iot.simulator.tenant']"}}},
 
 		{Name: "DEVICE_REGISTRY_URL", ValueFrom: &v1.EnvVarSource{ConfigMapKeyRef: &v1.ConfigMapKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: endpointConfigName}, Key: "deviceRegistry.url"}}},
+		{Name: "TLS_INSECURE", ValueFrom: &v1.EnvVarSource{ConfigMapKeyRef: &v1.ConfigMapKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: endpointConfigName}, Key: "tlsInsecure", Optional: &TRUE}}},
 	}
 
-	existing.Spec.Template.Spec.Containers[0].Env = append(existing.Spec.Template.Spec.Containers[0].Env, httpVariables(endpointConfigName)...)
+	if producer.Spec.NumberOfThreads != nil {
+		existing.Spec.Template.Spec.Containers[0].Env = append(existing.Spec.Template.Spec.Containers[0].Env, v1.EnvVar{
+			Name: "NUM_THREADS", Value: strconv.FormatUint(uint64(*producer.Spec.NumberOfThreads), 10),
+		})
+	}
 
 	existing.Spec.Template.Spec.Containers[0].Ports = []v1.ContainerPort{
 		{
@@ -267,12 +279,30 @@ func (r *ReconcileProducer) configureDeploymentConfig(producer *simv1alpha1.Simu
 	existing.Spec.Triggers[1].ImageChangeParams.From.Name = utils.MakeHelmInstanceName(producer) + "-parent:latest"
 
 	// now apply http specifics
-	r.configureHttp(producer, existing, messageType)
+
+	switch protocol {
+	case simv1alpha1.ProtocolMqtt:
+		existing.Spec.Template.Spec.Containers[0].Env = append(existing.Spec.Template.Spec.Containers[0].Env, mqttVariables(endpointConfigName)...)
+		r.configureMqtt(producer, existing, messageType)
+	default:
+		existing.Spec.Template.Spec.Containers[0].Env = append(existing.Spec.Template.Spec.Containers[0].Env, httpVariables(endpointConfigName)...)
+		r.configureHttp(producer, existing, messageType)
+	}
+
+}
+
+func (r *ReconcileProducer) configureMqtt(producer *simv1alpha1.SimulatorProducer, existing *appsv1.DeploymentConfig, messageType string) {
+
+	existing.Spec.Template.Spec.Containers[0].Command = []string{"java",
+		"-Xmx1024m",
+		"-Dvertx.cacheDirBase=/tmp",
+		"-Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.SLF4JLogDelegateFactory",
+		"-jar",
+		"/build/simulator-mqtt/target/simulator-mqtt-app.jar"}
+	existing.Spec.Template.Spec.Containers[0].Env = appendType(messageType, existing.Spec.Template.Spec.Containers[0].Env)
 }
 
 func (r *ReconcileProducer) configureHttp(producer *simv1alpha1.SimulatorProducer, existing *appsv1.DeploymentConfig, messageType string) {
-
-	existing.ObjectMeta.Labels["iot.simulator.producer.protocol"] = "http"
 
 	existing.Spec.Template.Spec.Containers[0].Command = []string{"java",
 		"-Xmx1024m",
@@ -281,6 +311,14 @@ func (r *ReconcileProducer) configureHttp(producer *simv1alpha1.SimulatorProduce
 		"-jar",
 		"/build/simulator-http/target/simulator-http-app.jar"}
 	existing.Spec.Template.Spec.Containers[0].Env = appendType(messageType, existing.Spec.Template.Spec.Containers[0].Env)
+}
+
+func mqttVariables(sec string) []corev1.EnvVar {
+
+	return []v1.EnvVar{
+		{Name: "HONO_MQTT_HOST", ValueFrom: &v1.EnvVarSource{ConfigMapKeyRef: &v1.ConfigMapKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: sec}, Key: "mqttAdapter.host"}}},
+		{Name: "HONO_MQTT_PORT", ValueFrom: &v1.EnvVarSource{ConfigMapKeyRef: &v1.ConfigMapKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: sec}, Key: "mqttAdapter.port"}}},
+	}
 }
 
 func httpVariables(sec string) []corev1.EnvVar {

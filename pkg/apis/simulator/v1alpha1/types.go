@@ -22,6 +22,8 @@ type CommonSpec struct {
 	Tenant    string `json:"tenant"`
 	Type      string `json:"type"`
 
+	Replicas int32 `json:"replicas"`
+
 	EndpointSettings string `json:"endpointSettings"`
 }
 
@@ -48,11 +50,18 @@ type SimulatorProducer struct {
 	Spec ProducerSpec `json:"spec,omitempty"`
 }
 
+type Protocol string
+
+const ProtocolHttp Protocol = "http"
+const ProtocolMqtt Protocol = "mqtt"
+
 type ProducerSpec struct {
 	CommonSpec
 
-	Replicas        uint32 `json:"replicas"`
-	NumberOfDevices uint32 `json:"numberOfDevices"`
+	Protocol Protocol `json:"protocol"`
+
+	NumberOfDevices uint32  `json:"numberOfDevices"`
+	NumberOfThreads *uint32 `json:"numberOfThreads,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

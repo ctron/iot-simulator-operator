@@ -201,7 +201,7 @@ func (r *ReconcileConsumer) configureDeploymentConfig(consumer *simv1alpha1.Simu
 	existing.ObjectMeta.Labels["iot.simulator.app"] = "consumer"
 	existing.ObjectMeta.Labels["iot.simulator.message.type"] = messageType
 
-	existing.Spec.Replicas = 1
+	existing.Spec.Replicas = consumer.Spec.Replicas
 	existing.Spec.Selector = map[string]string{
 		"app":              utils.MakeHelmInstanceName(consumer),
 		"deploymentconfig": utils.DeploymentConfigName("con", existing),
