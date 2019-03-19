@@ -241,7 +241,11 @@ func (r *ReconcileProducer) configureDeploymentConfig(producer *simv1alpha1.Simu
 	existing.Spec.Template.Spec.Containers[0].Name = "producer"
 	existing.Spec.Template.Spec.Containers[0].Env = []v1.EnvVar{
 
+		{Name: "MESSAGE_TYPE", Value: messageType},
+
+		{Name: "PERIOD_MS", Value: "1000"},
 		{Name: "NUM_DEVICES", Value: strconv.FormatUint(uint64(producer.Spec.NumberOfDevices), 10)},
+
 		{Name: "HONO_TENANT", ValueFrom: &v1.EnvVarSource{FieldRef: &v1.ObjectFieldSelector{APIVersion: "v1", FieldPath: "metadata.labels['iot.simulator.tenant']"}}},
 
 		{Name: "DEVICE_REGISTRY_URL", ValueFrom: &v1.EnvVarSource{ConfigMapKeyRef: &v1.ConfigMapKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: endpointConfigName}, Key: "deviceRegistry.url"}}},
@@ -299,7 +303,7 @@ func (r *ReconcileProducer) configureMqtt(producer *simv1alpha1.SimulatorProduce
 		"-Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.SLF4JLogDelegateFactory",
 		"-jar",
 		"/build/simulator-mqtt/target/simulator-mqtt-app.jar"}
-	existing.Spec.Template.Spec.Containers[0].Env = appendType(messageType, existing.Spec.Template.Spec.Containers[0].Env)
+
 }
 
 func (r *ReconcileProducer) configureHttp(producer *simv1alpha1.SimulatorProducer, existing *appsv1.DeploymentConfig, messageType string) {
@@ -310,7 +314,7 @@ func (r *ReconcileProducer) configureHttp(producer *simv1alpha1.SimulatorProduce
 		"-Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.SLF4JLogDelegateFactory",
 		"-jar",
 		"/build/simulator-http/target/simulator-http-app.jar"}
-	existing.Spec.Template.Spec.Containers[0].Env = appendType(messageType, existing.Spec.Template.Spec.Containers[0].Env)
+
 }
 
 func mqttVariables(sec string) []corev1.EnvVar {
@@ -329,16 +333,5 @@ func httpVariables(sec string) []corev1.EnvVar {
 		{Name: "VERTX_POOLED_BUFFERS", Value: "true"},
 		{Name: "VERTX_RECREATE_CLIENT", Value: "120000"},
 		{Name: "VERTX_KEEP_ALIVE", Value: "true"},
-	}
-}
-
-func appendType(t string, vars []corev1.EnvVar) []corev1.EnvVar {
-	switch t {
-	case "telemetry":
-		return append(vars, corev1.EnvVar{Name: "TELEMETRY_MS", Value: "1000"})
-	case "event":
-		return append(vars, corev1.EnvVar{Name: "EVENT_MS", Value: "1000"})
-	default:
-		return vars
 	}
 }
