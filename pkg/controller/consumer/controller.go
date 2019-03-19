@@ -16,6 +16,8 @@ package consumer
 import (
 	"context"
 
+	"k8s.io/apimachinery/pkg/api/resource"
+
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"github.com/ctron/iot-simulator-operator/pkg/utils"
@@ -230,7 +232,7 @@ func (r *ReconcileConsumer) configureDeploymentConfig(consumer *simv1alpha1.Simu
 	}
 
 	existing.Spec.Template.Spec.Containers[0].Name = "consumer"
-	existing.Spec.Template.Spec.Containers[0].Command = []string{"java", "-Xmx1024m", "-Dvertx.cacheDirBase=/tmp", "-Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.SLF4JLogDelegateFactory", "-jar", "/build/simulator-consumer/target/simulator-consumer-app.jar"}
+	existing.Spec.Template.Spec.Containers[0].Command = []string{"java", "-Dvertx.cacheDirBase=/tmp", "-Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.SLF4JLogDelegateFactory", "-jar", "/build/simulator-consumer/target/simulator-consumer-app.jar"}
 	existing.Spec.Template.Spec.Containers[0].Env = []v1.EnvVar{
 		{Name: "CONSUMING", Value: messageType},
 		{Name: "HONO_TRUSTED_CERTS", Value: "/etc/secrets/ca.crt"},
@@ -256,6 +258,14 @@ func (r *ReconcileConsumer) configureDeploymentConfig(consumer *simv1alpha1.Simu
 	}
 	existing.Spec.Template.Spec.Containers[0].LivenessProbe = applyProbe(existing.Spec.Template.Spec.Containers[0].LivenessProbe)
 	existing.Spec.Template.Spec.Containers[0].ReadinessProbe = applyProbe(existing.Spec.Template.Spec.Containers[0].ReadinessProbe)
+
+	// limits
+
+	existing.Spec.Template.Spec.Containers[0].Resources = corev1.ResourceRequirements{
+		Limits: corev1.ResourceList{
+			corev1.ResourceMemory: *resource.NewQuantity(1024*1024*1024 /* 1024Mi */, resource.BinarySI),
+		},
+	}
 
 	// volumes
 

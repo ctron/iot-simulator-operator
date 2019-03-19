@@ -17,6 +17,8 @@ import (
 	"context"
 	"strconv"
 
+	"k8s.io/apimachinery/pkg/api/resource"
+
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"github.com/ctron/iot-simulator-operator/pkg/utils"
@@ -266,6 +268,14 @@ func (r *ReconcileProducer) configureDeploymentConfig(producer *simv1alpha1.Simu
 		},
 	}
 
+	// resource limits
+
+	existing.Spec.Template.Spec.Containers[0].Resources = corev1.ResourceRequirements{
+		Limits: corev1.ResourceList{
+			corev1.ResourceMemory: *resource.NewQuantity(1024*1024*1024 /* 1024Mi */, resource.BinarySI),
+		},
+	}
+
 	// triggers
 
 	if len(existing.Spec.Triggers) != 2 {
@@ -298,7 +308,6 @@ func (r *ReconcileProducer) configureDeploymentConfig(producer *simv1alpha1.Simu
 func (r *ReconcileProducer) configureMqtt(producer *simv1alpha1.SimulatorProducer, existing *appsv1.DeploymentConfig, messageType string) {
 
 	existing.Spec.Template.Spec.Containers[0].Command = []string{"java",
-		"-Xmx1024m",
 		"-Dvertx.cacheDirBase=/tmp",
 		"-Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.SLF4JLogDelegateFactory",
 		"-jar",
@@ -309,7 +318,6 @@ func (r *ReconcileProducer) configureMqtt(producer *simv1alpha1.SimulatorProduce
 func (r *ReconcileProducer) configureHttp(producer *simv1alpha1.SimulatorProducer, existing *appsv1.DeploymentConfig, messageType string) {
 
 	existing.Spec.Template.Spec.Containers[0].Command = []string{"java",
-		"-Xmx1024m",
 		"-Dvertx.cacheDirBase=/tmp",
 		"-Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.SLF4JLogDelegateFactory",
 		"-jar",
