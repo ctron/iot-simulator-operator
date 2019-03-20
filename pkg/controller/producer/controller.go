@@ -17,6 +17,8 @@ import (
 	"context"
 	"strconv"
 
+	"github.com/ctron/iot-simulator-operator/pkg/controller/common"
+
 	"k8s.io/apimachinery/pkg/api/resource"
 
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -267,6 +269,11 @@ func (r *ReconcileProducer) configureDeploymentConfig(producer *simv1alpha1.Simu
 			Protocol:      corev1.ProtocolTCP,
 		},
 	}
+
+	// health checks
+
+	existing.Spec.Template.Spec.Containers[0].LivenessProbe = common.ApplyProbe(existing.Spec.Template.Spec.Containers[0].LivenessProbe)
+	existing.Spec.Template.Spec.Containers[0].ReadinessProbe = common.ApplyProbe(existing.Spec.Template.Spec.Containers[0].ReadinessProbe)
 
 	// resource limits
 

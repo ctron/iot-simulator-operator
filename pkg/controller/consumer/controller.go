@@ -16,6 +16,8 @@ package consumer
 import (
 	"context"
 
+	"github.com/ctron/iot-simulator-operator/pkg/controller/common"
+
 	"k8s.io/apimachinery/pkg/api/resource"
 
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -256,8 +258,11 @@ func (r *ReconcileConsumer) configureDeploymentConfig(consumer *simv1alpha1.Simu
 			Name:      "secrets-volume",
 		},
 	}
-	existing.Spec.Template.Spec.Containers[0].LivenessProbe = applyProbe(existing.Spec.Template.Spec.Containers[0].LivenessProbe)
-	existing.Spec.Template.Spec.Containers[0].ReadinessProbe = applyProbe(existing.Spec.Template.Spec.Containers[0].ReadinessProbe)
+
+	// health checks
+
+	existing.Spec.Template.Spec.Containers[0].LivenessProbe = common.ApplyProbe(existing.Spec.Template.Spec.Containers[0].LivenessProbe)
+	existing.Spec.Template.Spec.Containers[0].ReadinessProbe = common.ApplyProbe(existing.Spec.Template.Spec.Containers[0].ReadinessProbe)
 
 	// limits
 
@@ -295,18 +300,4 @@ func (r *ReconcileConsumer) configureDeploymentConfig(consumer *simv1alpha1.Simu
 	existing.Spec.Triggers[1].ImageChangeParams.From.Kind = "ImageStreamTag"
 	existing.Spec.Triggers[1].ImageChangeParams.From.Name = utils.MakeHelmInstanceName(consumer) + "-parent:latest"
 
-}
-
-func applyProbe(probe *corev1.Probe) *corev1.Probe {
-	if probe == nil {
-		probe = &corev1.Probe{}
-	}
-	probe.Exec = nil
-	probe.TCPSocket = nil
-	probe.HTTPGet = &corev1.HTTPGetAction{
-		Path:   "/health",
-		Port:   intstr.FromInt(8081),
-		Scheme: corev1.URISchemeHTTP,
-	}
-	return probe
 }
