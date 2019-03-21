@@ -15,6 +15,8 @@ package consumer
 
 import (
 	"context"
+	"encoding/base64"
+	"strconv"
 
 	"github.com/ctron/iot-simulator-operator/pkg/controller/common"
 
@@ -100,6 +102,10 @@ func (r *ReconcileConsumer) Reconcile(request reconcile.Request) (reconcile.Resu
 		}
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
+	}
+
+	if instance.Spec.Simulator != common.WatchSimulatorName {
+		return reconcile.Result{}, nil
 	}
 
 	err = r.reconcileDeploymentConfig(request, instance)
@@ -192,7 +198,6 @@ func (r *ReconcileConsumer) configureDeploymentConfig(consumer *simv1alpha1.Simu
 		existing.ObjectMeta.Labels = map[string]string{}
 	}
 
-	endpointConfigName := consumer.Spec.EndpointSettings
 	messageType := consumer.Spec.Type
 	if messageType == "" {
 		messageType = "telemetry"
@@ -225,7 +230,6 @@ func (r *ReconcileConsumer) configureDeploymentConfig(consumer *simv1alpha1.Simu
 	existing.Spec.Template.ObjectMeta.Labels["deploymentconfig"] = utils.DeploymentConfigName("con", existing)
 	existing.Spec.Template.ObjectMeta.Labels["iot.simulator.tenant"] = consumer.Spec.Tenant
 	existing.Spec.Template.ObjectMeta.Labels["iot.simulator"] = consumer.Spec.Simulator
-	existing.Spec.Template.ObjectMeta.Labels["iot.simulator.settings"] = consumer.Spec.EndpointSettings
 
 	// container
 
@@ -240,22 +244,17 @@ func (r *ReconcileConsumer) configureDeploymentConfig(consumer *simv1alpha1.Simu
 		{Name: "HONO_TRUSTED_CERTS", Value: "/etc/secrets/ca.crt"},
 		{Name: "HONO_INITIAL_CREDITS", Value: "100"},
 		{Name: "HONO_TENANT", ValueFrom: &v1.EnvVarSource{FieldRef: &v1.ObjectFieldSelector{APIVersion: "v1", FieldPath: "metadata.labels['iot.simulator.tenant']"}}},
-		{Name: "HONO_USER", ValueFrom: &v1.EnvVarSource{SecretKeyRef: &v1.SecretKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: endpointConfigName}, Key: "endpoint.username"}}},
-		{Name: "HONO_PASSWORD", ValueFrom: &v1.EnvVarSource{SecretKeyRef: &v1.SecretKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: endpointConfigName}, Key: "endpoint.password"}}},
-		{Name: "MESSAGING_SERVICE_HOST", ValueFrom: &v1.EnvVarSource{ConfigMapKeyRef: &v1.ConfigMapKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: endpointConfigName}, Key: "endpoint.host"}}},
-		{Name: "MESSAGING_SERVICE_PORT_AMQP", ValueFrom: &v1.EnvVarSource{ConfigMapKeyRef: &v1.ConfigMapKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: endpointConfigName}, Key: "endpoint.port"}}},
+		{Name: "HONO_USER", Value: common.Endpoint.Messaging.User},
+		{Name: "HONO_PASSWORD", Value: common.Endpoint.Messaging.Password},
+		{Name: "MESSAGING_SERVICE_HOST", Value: common.Endpoint.Messaging.Host},
+		{Name: "MESSAGING_SERVICE_PORT_AMQP", Value: strconv.Itoa(common.Endpoint.Messaging.Port)},
+		{Name: "MESSAGING_CA_CERT", Value: base64.StdEncoding.EncodeToString(common.Endpoint.Messaging.CACertificate)},
 	}
 	existing.Spec.Template.Spec.Containers[0].Ports = []v1.ContainerPort{
 		{
 			ContainerPort: 8081,
 			Name:          "metrics",
 			Protocol:      corev1.ProtocolTCP,
-		},
-	}
-	existing.Spec.Template.Spec.Containers[0].VolumeMounts = []corev1.VolumeMount{
-		{
-			MountPath: "/etc/secrets",
-			Name:      "secrets-volume",
 		},
 	}
 
@@ -271,18 +270,6 @@ func (r *ReconcileConsumer) configureDeploymentConfig(consumer *simv1alpha1.Simu
 			corev1.ResourceMemory: *resource.NewQuantity(1024*1024*1024 /* 1024Mi */, resource.BinarySI),
 		},
 	}
-
-	// volumes
-
-	if len(existing.Spec.Template.Spec.Volumes) != 1 {
-		existing.Spec.Template.Spec.Volumes = make([]corev1.Volume, 1)
-	}
-
-	existing.Spec.Template.Spec.Volumes[0].Name = "secrets-volume"
-	if existing.Spec.Template.Spec.Volumes[0].Secret == nil {
-		existing.Spec.Template.Spec.Volumes[0].Secret = &corev1.SecretVolumeSource{}
-	}
-	existing.Spec.Template.Spec.Volumes[0].Secret.SecretName = endpointConfigName
 
 	// triggers
 

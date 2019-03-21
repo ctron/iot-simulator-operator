@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018 Red Hat Inc
+ * Copyright (c) 2018, 2019 Red Hat Inc
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -17,14 +17,71 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +k8s:openapi-gen=true
+type Simulator struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	Spec SimulatorSpec `json:"spec,omitempty"`
+}
+
+type SimulatorSpec struct {
+	Builds   map[string]Build  `json:"builds,omitempty"`
+	Endpoint SimulatorEndpoint `json:"endpoint"`
+}
+
+type Build struct {
+	Git GitSource `json:"git"`
+}
+
+type GitSource struct {
+	URI       string `json:"uri"`
+	Reference string `json:"ref,omitempty"`
+}
+
+type SimulatorEndpoint struct {
+	Messaging MessagingEndpoint `json:"messaging"`
+	Registry  URLEndpoint       `json:"registry"`
+	Adapters  AdapterEndpoints  `json:"adapters"`
+}
+
+type HostAndPortEndpoint struct {
+	Host string `json:"host"`
+	Port int    `json:"port"`
+}
+
+type MessagingEndpoint struct {
+	HostAndPortEndpoint `json:",inline"`
+
+	User          string `json:"user"`
+	Password      string `json:"password"`
+	CACertificate []byte `json:"caCertificate"`
+}
+
+type AdapterEndpoints struct {
+	HTTP URLEndpoint         `json:"http"`
+	MQTT HostAndPortEndpoint `json:"mqtt"`
+}
+
+type URLEndpoint struct {
+	URL string `json:"url"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type SimulatorList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []Simulator `json:"items"`
+}
+
 type CommonSpec struct {
 	Simulator string `json:"simulator"`
 	Tenant    string `json:"tenant"`
 	Type      string `json:"type"`
 
 	Replicas int32 `json:"replicas"`
-
-	EndpointSettings string `json:"endpointSettings"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -84,6 +141,9 @@ type SimulatorProducerList struct {
 
 func init() {
 	SchemeBuilder.Register(
+		&Simulator{},
+		&SimulatorList{},
+
 		&SimulatorConsumer{},
 		&SimulatorConsumerList{},
 

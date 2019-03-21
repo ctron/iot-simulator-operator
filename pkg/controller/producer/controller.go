@@ -105,6 +105,10 @@ func (r *ReconcileProducer) Reconcile(request reconcile.Request) (reconcile.Resu
 		return reconcile.Result{}, err
 	}
 
+	if instance.Spec.Simulator != common.WatchSimulatorName {
+		return reconcile.Result{}, nil
+	}
+
 	err = r.reconcileDeploymentConfig(request, instance)
 	if err != nil {
 		return reconcile.Result{}, err
@@ -196,7 +200,6 @@ func (r *ReconcileProducer) configureDeploymentConfig(producer *simv1alpha1.Simu
 		existing.ObjectMeta.Labels = map[string]string{}
 	}
 
-	endpointConfigName := producer.Spec.EndpointSettings
 	messageType := producer.Spec.Type
 	if messageType == "" {
 		messageType = "telemetry"
@@ -234,7 +237,6 @@ func (r *ReconcileProducer) configureDeploymentConfig(producer *simv1alpha1.Simu
 	existing.Spec.Template.ObjectMeta.Labels["deploymentconfig"] = utils.DeploymentConfigName("prod", existing)
 	existing.Spec.Template.ObjectMeta.Labels["iot.simulator.tenant"] = producer.Spec.Tenant
 	existing.Spec.Template.ObjectMeta.Labels["iot.simulator"] = producer.Spec.Simulator
-	existing.Spec.Template.ObjectMeta.Labels["iot.simulator.settings"] = producer.Spec.EndpointSettings
 
 	// containers
 
@@ -252,8 +254,7 @@ func (r *ReconcileProducer) configureDeploymentConfig(producer *simv1alpha1.Simu
 
 		{Name: "HONO_TENANT", ValueFrom: &v1.EnvVarSource{FieldRef: &v1.ObjectFieldSelector{APIVersion: "v1", FieldPath: "metadata.labels['iot.simulator.tenant']"}}},
 
-		{Name: "DEVICE_REGISTRY_URL", ValueFrom: &v1.EnvVarSource{ConfigMapKeyRef: &v1.ConfigMapKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: endpointConfigName}, Key: "deviceRegistry.url"}}},
-		{Name: "TLS_INSECURE", ValueFrom: &v1.EnvVarSource{ConfigMapKeyRef: &v1.ConfigMapKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: endpointConfigName}, Key: "tlsInsecure", Optional: &TRUE}}},
+		{Name: "DEVICE_REGISTRY_URL", Value: common.Endpoint.Registry.URL},
 	}
 
 	if producer.Spec.NumberOfThreads != nil {
@@ -303,10 +304,10 @@ func (r *ReconcileProducer) configureDeploymentConfig(producer *simv1alpha1.Simu
 
 	switch protocol {
 	case simv1alpha1.ProtocolMqtt:
-		existing.Spec.Template.Spec.Containers[0].Env = append(existing.Spec.Template.Spec.Containers[0].Env, mqttVariables(endpointConfigName)...)
+		existing.Spec.Template.Spec.Containers[0].Env = append(existing.Spec.Template.Spec.Containers[0].Env, mqttVariables()...)
 		r.configureMqtt(producer, existing, messageType)
 	default:
-		existing.Spec.Template.Spec.Containers[0].Env = append(existing.Spec.Template.Spec.Containers[0].Env, httpVariables(endpointConfigName)...)
+		existing.Spec.Template.Spec.Containers[0].Env = append(existing.Spec.Template.Spec.Containers[0].Env, httpVariables()...)
 		r.configureHttp(producer, existing, messageType)
 	}
 
@@ -332,18 +333,18 @@ func (r *ReconcileProducer) configureHttp(producer *simv1alpha1.SimulatorProduce
 
 }
 
-func mqttVariables(sec string) []corev1.EnvVar {
+func mqttVariables() []corev1.EnvVar {
 
 	return []v1.EnvVar{
-		{Name: "HONO_MQTT_HOST", ValueFrom: &v1.EnvVarSource{ConfigMapKeyRef: &v1.ConfigMapKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: sec}, Key: "mqttAdapter.host"}}},
-		{Name: "HONO_MQTT_PORT", ValueFrom: &v1.EnvVarSource{ConfigMapKeyRef: &v1.ConfigMapKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: sec}, Key: "mqttAdapter.port"}}},
+		{Name: "HONO_MQTT_HOST", Value: common.Endpoint.Adapters.MQTT.Host},
+		{Name: "HONO_MQTT_PORT", Value: strconv.Itoa(common.Endpoint.Adapters.MQTT.Port)},
 	}
 }
 
-func httpVariables(sec string) []corev1.EnvVar {
+func httpVariables() []corev1.EnvVar {
 
 	return []v1.EnvVar{
-		{Name: "HONO_HTTP_URL", ValueFrom: &v1.EnvVarSource{ConfigMapKeyRef: &v1.ConfigMapKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: sec}, Key: "httpAdapter.url"}}},
+		{Name: "HONO_HTTP_URL", Value: common.Endpoint.Adapters.HTTP.URL},
 		{Name: "DEVICE_PROVIDER", Value: "VERTX"},
 		{Name: "VERTX_POOLED_BUFFERS", Value: "true"},
 		{Name: "VERTX_RECREATE_CLIENT", Value: "120000"},

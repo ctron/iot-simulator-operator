@@ -48,47 +48,41 @@ func main() {
 	// implementing the logr.Logger interface. This logger will
 	// be propagated through the whole operator, generating
 	// uniform and structured logs.
-	logf.SetLogger(logf.ZapLogger(false))
+	logf.SetLogger(logf.ZapLogger(os.Getenv("DEVELOPMENT") == "true"))
 
 	printVersion()
 
 	namespace, err := k8sutil.GetWatchNamespace()
 	if err != nil {
-		log.Error(err, "failed to get watch namespace")
-		os.Exit(1)
+		panic(err)
 	}
 
 	// Get a config to talk to the apiserver
 	cfg, err := config.GetConfig()
 	if err != nil {
-		log.Error(err, "")
-		os.Exit(1)
+		panic(err)
 	}
 
 	// Create a new Cmd to provide shared dependencies and start components
 	mgr, err := manager.New(cfg, manager.Options{Namespace: namespace})
 	if err != nil {
-		log.Error(err, "")
-		os.Exit(1)
+		panic(err)
 	}
 
 	log.Info("Registering Components.")
 
 	// Setup Scheme for all resources
 	if err := apis.AddToScheme(mgr.GetScheme()); err != nil {
-		log.Error(err, "")
-		os.Exit(1)
+		panic(err)
 	}
 
 	if err := apps.Install(mgr.GetScheme()); err != nil {
-		log.Error(err, "")
-		os.Exit(1)
+		panic(err)
 	}
 
 	// Setup all Controllers
 	if err := controller.AddToManager(mgr); err != nil {
-		log.Error(err, "")
-		os.Exit(1)
+		panic(err)
 	}
 
 	log.Info("Starting the Cmd.")
