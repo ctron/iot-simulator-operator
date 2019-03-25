@@ -7,5 +7,5 @@ metadata:
     rbac.authorization.k8s.io/aggregate-to-edit: "true"
 rules:
   - apiGroups: [ "iot.dentrassi.de" ]
-    resources: [ "simulatorconsumers", "simulatorproducers" ]
+    resources: [ "simulators", "simulatorconsumers", "simulatorproducers" ]
     verbs: [ "*" ]

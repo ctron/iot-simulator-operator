@@ -16,10 +16,12 @@ package controller
 import (
 	"github.com/ctron/iot-simulator-operator/pkg/controller/consumer"
 	"github.com/ctron/iot-simulator-operator/pkg/controller/producer"
+	"github.com/ctron/iot-simulator-operator/pkg/controller/simulator"
 )
 
 func init() {
 	// AddToManagerFuncs is a list of functions to create controllers and add them to a manager.
+	AddToManagerFuncs = append(AddToManagerFuncs, simulator.Add)
 	AddToManagerFuncs = append(AddToManagerFuncs, consumer.Add)
 	AddToManagerFuncs = append(AddToManagerFuncs, producer.Add)
 }

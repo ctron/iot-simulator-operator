@@ -19,9 +19,11 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
+	"github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
 
-	"github.com/openshift/api/apps"
+	"github.com/openshift/api"
+
+	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 
 	"github.com/ctron/iot-simulator-operator/pkg/apis"
 	"github.com/ctron/iot-simulator-operator/pkg/controller"
@@ -76,7 +78,13 @@ func main() {
 		panic(err)
 	}
 
-	if err := apps.Install(mgr.GetScheme()); err != nil {
+	// OpenShift API
+	if err := api.Install(mgr.GetScheme()); err != nil {
+		panic(err)
+	}
+
+	// Prometheus API
+	if err := v1.SchemeBuilder.AddToScheme(mgr.GetScheme()); err != nil {
 		panic(err)
 	}
 

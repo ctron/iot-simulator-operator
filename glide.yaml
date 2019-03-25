@@ -13,15 +13,26 @@ import:
     version: ^1
 
   - package: k8s.io/code-generator
-    version: kubernetes-1.12.3
+    version: kubernetes-1.12.5
+  - package: k8s.io/apimachinery
+    version: kubernetes-1.12.5
+  - package: k8s.io/api
+    version: kubernetes-1.12.5
   - package: k8s.io/gengo
   - package: github.com/spf13/pflag
-    version: ^1.0
+    version: ~1.0
   - package: golang.org/x/tools
   - package: sigs.k8s.io/controller-runtime
     version: 0.1.9
   - package: github.com/operator-framework/operator-sdk
-    version: ^0.3
+    version: ~0.3
 
   - package: k8s.io/klog
     version: ^0.1
+
+  - package: github.com/operator-framework/operator-lifecycle-manager
+    version: v3.11.0
+
+  - package: github.com/coreos/prometheus-operator/releases
+    version: ^0.22
+  - package: github.com/emicklei/go-restful

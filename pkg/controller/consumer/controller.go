@@ -15,8 +15,6 @@ package consumer
 
 import (
 	"context"
-	"encoding/base64"
-	"strconv"
 
 	"github.com/ctron/iot-simulator-operator/pkg/controller/common"
 
@@ -102,10 +100,6 @@ func (r *ReconcileConsumer) Reconcile(request reconcile.Request) (reconcile.Resu
 		}
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
-	}
-
-	if instance.Spec.Simulator != common.WatchSimulatorName {
-		return reconcile.Result{}, nil
 	}
 
 	err = r.reconcileDeploymentConfig(request, instance)
@@ -198,6 +192,7 @@ func (r *ReconcileConsumer) configureDeploymentConfig(consumer *simv1alpha1.Simu
 		existing.ObjectMeta.Labels = map[string]string{}
 	}
 
+	simulatorName := consumer.Spec.Simulator
 	messageType := consumer.Spec.Type
 	if messageType == "" {
 		messageType = "telemetry"
@@ -237,6 +232,7 @@ func (r *ReconcileConsumer) configureDeploymentConfig(consumer *simv1alpha1.Simu
 		existing.Spec.Template.Spec.Containers = make([]corev1.Container, 1)
 	}
 
+	TRUE := true
 	existing.Spec.Template.Spec.Containers[0].Name = "consumer"
 	existing.Spec.Template.Spec.Containers[0].Command = []string{"java", "-Dvertx.cacheDirBase=/tmp", "-Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.SLF4JLogDelegateFactory", "-jar", "/build/simulator-consumer/target/simulator-consumer-app.jar"}
 	existing.Spec.Template.Spec.Containers[0].Env = []v1.EnvVar{
@@ -244,11 +240,13 @@ func (r *ReconcileConsumer) configureDeploymentConfig(consumer *simv1alpha1.Simu
 		{Name: "HONO_TRUSTED_CERTS", Value: "/etc/secrets/ca.crt"},
 		{Name: "HONO_INITIAL_CREDITS", Value: "100"},
 		{Name: "HONO_TENANT", ValueFrom: &v1.EnvVarSource{FieldRef: &v1.ObjectFieldSelector{APIVersion: "v1", FieldPath: "metadata.labels['iot.simulator.tenant']"}}},
-		{Name: "HONO_USER", Value: common.Endpoint.Messaging.User},
-		{Name: "HONO_PASSWORD", Value: common.Endpoint.Messaging.Password},
-		{Name: "MESSAGING_SERVICE_HOST", Value: common.Endpoint.Messaging.Host},
-		{Name: "MESSAGING_SERVICE_PORT_AMQP", Value: strconv.Itoa(common.Endpoint.Messaging.Port)},
-		{Name: "MESSAGING_CA_CERT", Value: base64.StdEncoding.EncodeToString(common.Endpoint.Messaging.CACertificate)},
+
+		{Name: "HONO_USER", ValueFrom: &v1.EnvVarSource{SecretKeyRef: &v1.SecretKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: simulatorName}, Key: "endpoint.username"}}},
+		{Name: "HONO_PASSWORD", ValueFrom: &v1.EnvVarSource{SecretKeyRef: &v1.SecretKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: simulatorName}, Key: "endpoint.password"}}},
+		{Name: "MESSAGING_SERVICE_HOST", ValueFrom: &v1.EnvVarSource{ConfigMapKeyRef: &v1.ConfigMapKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: simulatorName}, Key: "endpoint.host"}}},
+		{Name: "MESSAGING_SERVICE_PORT_AMQP", ValueFrom: &v1.EnvVarSource{ConfigMapKeyRef: &v1.ConfigMapKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: simulatorName}, Key: "endpoint.port"}}},
+
+		{Name: "MESSAGING_CA_CERT", ValueFrom: &v1.EnvVarSource{SecretKeyRef: &v1.SecretKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: simulatorName}, Key: "endpoint.caCertificate", Optional: &TRUE}}},
 	}
 	existing.Spec.Template.Spec.Containers[0].Ports = []v1.ContainerPort{
 		{
