@@ -1,5 +1,5 @@
 hash: 739c43a1a83f4b48de391f2e25117f97af57d9d4dfea50c39b4a2f2d9029ce45
-updated: 2019-03-25T18:19:25.320150472+01:00
+updated: 2019-03-27T10:43:54.32979717+01:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -10,10 +10,6 @@ imports:
   version: 3ac7bf7a47d159a033b107610db8a1b6575507a4
   subpackages:
   - quantile
-- name: github.com/coreos/go-semver
-  version: e214231b295a8ea9479f11b70b35d5acf3556d9b
-  subpackages:
-  - semver
 - name: github.com/coreos/prometheus-operator
   version: 7a25bf6b6bb2347dacb235659b73bc210117acc7
   subpackages:
@@ -21,13 +17,12 @@ imports:
   - pkg/apis/monitoring/v1
   - releases
 - name: github.com/ctron/operator-tools
-  version: 0c6fe9771b8d6fda6a39438d6e959ecb94a1b796
+  version: 036685b1972d065f016a632e1d56dace5880d3aa
   subpackages:
   - pkg/install
   - pkg/install/core/service
   - pkg/install/core/serviceaccount
   - pkg/install/mixin
-  - pkg/install/olm/subscription
   - pkg/install/openshift/build
   - pkg/install/openshift/dc
   - pkg/install/openshift/imagestream
@@ -158,9 +153,6 @@ imports:
   version: 431ec9a26e5021f35fa41ee9a89842db9bfdb370
 - name: github.com/operator-framework/operator-lifecycle-manager
   version: 2abd0e2b4d93b4100220204d429d68a9990a160b
-  subpackages:
-  - pkg/api/apis/operators
-  - pkg/api/apis/operators/v1alpha1
 - name: github.com/operator-framework/operator-sdk
   version: 15244d60ef7e328531a4f150a05b1fdabf9cc1ae
   subpackages:
@@ -304,12 +296,6 @@ imports:
   - storage/v1
   - storage/v1alpha1
   - storage/v1beta1
-- name: k8s.io/apiextensions-apiserver
-  version: 1c09d17c135214f70b41ba7f027246a6bcdd87ce
-  subpackages:
-  - pkg/apis/apiextensions
-  - pkg/apis/apiextensions/v1beta1
-  - pkg/client/clientset/clientset/scheme
 - name: k8s.io/apimachinery
   version: 49ce2735e5074ffc3f8190c8406cf51a96302dad
   subpackages:

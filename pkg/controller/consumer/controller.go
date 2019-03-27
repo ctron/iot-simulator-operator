@@ -232,12 +232,11 @@ func (r *ReconcileConsumer) configureDeploymentConfig(consumer *simv1alpha1.Simu
 		existing.Spec.Template.Spec.Containers = make([]corev1.Container, 1)
 	}
 
-	TRUE := true
 	existing.Spec.Template.Spec.Containers[0].Name = "consumer"
 	existing.Spec.Template.Spec.Containers[0].Command = []string{"java", "-Dvertx.cacheDirBase=/tmp", "-Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.SLF4JLogDelegateFactory", "-jar", "/build/simulator-consumer/target/simulator-consumer-app.jar"}
 	existing.Spec.Template.Spec.Containers[0].Env = []v1.EnvVar{
 		{Name: "CONSUMING", Value: messageType},
-		{Name: "HONO_TRUSTED_CERTS", Value: "/etc/secrets/ca.crt"},
+		{Name: "HONO_TRUSTED_CERTS", Value: "/etc/secrets/messaging.ca.crt"},
 		{Name: "HONO_INITIAL_CREDITS", Value: "100"},
 		{Name: "HONO_TENANT", ValueFrom: &v1.EnvVarSource{FieldRef: &v1.ObjectFieldSelector{APIVersion: "v1", FieldPath: "metadata.labels['iot.simulator.tenant']"}}},
 
@@ -245,8 +244,6 @@ func (r *ReconcileConsumer) configureDeploymentConfig(consumer *simv1alpha1.Simu
 		{Name: "HONO_PASSWORD", ValueFrom: &v1.EnvVarSource{SecretKeyRef: &v1.SecretKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: simulatorName}, Key: "endpoint.password"}}},
 		{Name: "MESSAGING_SERVICE_HOST", ValueFrom: &v1.EnvVarSource{ConfigMapKeyRef: &v1.ConfigMapKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: simulatorName}, Key: "endpoint.host"}}},
 		{Name: "MESSAGING_SERVICE_PORT_AMQP", ValueFrom: &v1.EnvVarSource{ConfigMapKeyRef: &v1.ConfigMapKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: simulatorName}, Key: "endpoint.port"}}},
-
-		{Name: "MESSAGING_CA_CERT", ValueFrom: &v1.EnvVarSource{SecretKeyRef: &v1.SecretKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: simulatorName}, Key: "endpoint.caCertificate", Optional: &TRUE}}},
 	}
 	existing.Spec.Template.Spec.Containers[0].Ports = []v1.ContainerPort{
 		{
@@ -255,6 +252,23 @@ func (r *ReconcileConsumer) configureDeploymentConfig(consumer *simv1alpha1.Simu
 			Protocol:      corev1.ProtocolTCP,
 		},
 	}
+
+	// volumes
+
+	if len(existing.Spec.Template.Spec.Containers[0].VolumeMounts) != 1 {
+		existing.Spec.Template.Spec.Containers[0].VolumeMounts = make([]corev1.VolumeMount, 1)
+	}
+	existing.Spec.Template.Spec.Containers[0].VolumeMounts[0].Name = "secrets"
+	existing.Spec.Template.Spec.Containers[0].VolumeMounts[0].MountPath = "/etc/secrets"
+
+	if len(existing.Spec.Template.Spec.Volumes) != 1 {
+		existing.Spec.Template.Spec.Volumes = make([]corev1.Volume, 1)
+	}
+	existing.Spec.Template.Spec.Volumes[0].Name = "secrets"
+	if existing.Spec.Template.Spec.Volumes[0].Secret == nil {
+		existing.Spec.Template.Spec.Volumes[0].Secret = &corev1.SecretVolumeSource{}
+	}
+	existing.Spec.Template.Spec.Volumes[0].Secret.SecretName = consumer.Spec.Simulator
 
 	// health checks
 

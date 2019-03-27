@@ -15,6 +15,11 @@ package simulator
 
 import (
 	"context"
+	"strconv"
+
+	"github.com/ctron/operator-tools/pkg/install/core/secret"
+
+	"github.com/ctron/operator-tools/pkg/install/core/configmap"
 
 	"k8s.io/apimachinery/pkg/api/resource"
 
@@ -392,6 +397,41 @@ func (r *ReconcileSimulator) Reconcile(request reconcile.Request) (reconcile.Res
 		sharedOwnerFn,
 		mixin.AppendLabelMixin("metrics", "iot-simulator"),
 	)))
+
+	// endpoint information
+
+	rec.Process(configmap.ReconcileConfigMapSimple(instance.Name, func(configMap *corev1.ConfigMap) error {
+		if configMap.Data == nil {
+			configMap.Data = make(map[string]string)
+		}
+
+		configMap.Data["endpoint.host"] = instance.Spec.Endpoint.Messaging.Host
+		configMap.Data["endpoint.port"] = strconv.Itoa(instance.Spec.Endpoint.Messaging.Port)
+
+		configMap.Data["deviceRegistry.url"] = instance.Spec.Endpoint.Registry.URL
+
+		configMap.Data["mqttAdapter.host"] = instance.Spec.Endpoint.Adapters.MQTT.Host
+		configMap.Data["mqttAdapter.port"] = strconv.Itoa(instance.Spec.Endpoint.Adapters.MQTT.Port)
+
+		configMap.Data["httpAdapter.url"] = instance.Spec.Endpoint.Adapters.HTTP.URL
+
+		return nil
+	}, ownerFn))
+
+	rec.Process(secret.ReconcileSecretSimple(instance.Name, func(secret *corev1.Secret) error {
+		if secret.Data == nil {
+			secret.Data = make(map[string][]byte)
+		}
+
+		secret.Data["endpoint.username"] = []byte(instance.Spec.Endpoint.Messaging.User)
+		secret.Data["endpoint.password"] = []byte(instance.Spec.Endpoint.Messaging.Password)
+
+		if len(instance.Spec.Endpoint.Messaging.CACertificate) > 0 {
+			secret.Data["messaging.ca.crt"] = instance.Spec.Endpoint.Messaging.CACertificate
+		}
+
+		return nil
+	}, ownerFn))
 
 	return rec.Result()
 }
