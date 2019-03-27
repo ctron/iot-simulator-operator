@@ -8,6 +8,6 @@ spec:
     kind: Simulator
     listKind: SimulatorList
     plural: simulators
-    singular: simulators
+    singular: simulator
   scope: Namespaced
   version: v1alpha1
