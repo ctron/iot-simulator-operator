@@ -200,6 +200,8 @@ func (r *ReconcileSimulator) Reconcile(request reconcile.Request) (reconcile.Res
 		build.SetOutputImageStream(config, "iot-simulator-console:latest")
 		build.EnableDefaultTriggers(config)
 
+		config.Spec.Strategy.DockerStrategy.DockerfilePath = "Dockerfile.s2i"
+
 		return nil
 	}, mixin.Mix(
 		sharedOwnerFn,
