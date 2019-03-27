@@ -36,3 +36,4 @@ import:
   - package: github.com/coreos/prometheus-operator/releases
     version: ^0.22
   - package: github.com/emicklei/go-restful
+  - package: github.com/ctron/operator-tools

@@ -1,5 +1,5 @@
-hash: 739c43a1a83f4b48de391f2e25117f97af57d9d4dfea50c39b4a2f2d9029ce45
-updated: 2019-03-27T10:43:54.32979717+01:00
+hash: 05d249dc5e06a01dc1a27237a939a94fb97154292615bcb276f5d9e04fb3cebe
+updated: 2019-03-27T11:27:18.23255067+01:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -20,6 +20,8 @@ imports:
   version: 036685b1972d065f016a632e1d56dace5880d3aa
   subpackages:
   - pkg/install
+  - pkg/install/core/configmap
+  - pkg/install/core/secret
   - pkg/install/core/service
   - pkg/install/core/serviceaccount
   - pkg/install/mixin
