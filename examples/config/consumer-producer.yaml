@@ -7,14 +7,28 @@ spec:
   simulator: enmasse1
   tenant: myapp.iot
   type: telemetry
+  replicas: 1
 ---
 kind: SimulatorProducer
 apiVersion: iot.dentrassi.de/v1alpha1
 metadata:
   name: prod-http1
 spec:
-  simulator: sim
+  simulator: enmasse1
   tenant: myapp.iot
+  protocol: http
+  type: telemetry
+  numberOfDevices: 10
+  replicas: 1
+---
+kind: SimulatorProducer
+apiVersion: iot.dentrassi.de/v1alpha1
+metadata:
+  name: prod-mqtt1
+spec:
+  simulator: enmasse1
+  tenant: myapp.iot
+  protocol: mqtt
   type: telemetry
   numberOfDevices: 10
   replicas: 1
