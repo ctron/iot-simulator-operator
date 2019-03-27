@@ -147,7 +147,7 @@ func (r *ReconcileConsumer) configureService(consumer *simv1alpha1.SimulatorCons
 
 	existing.ObjectMeta.Labels["app"] = utils.MakeInstanceName(consumer)
 	existing.ObjectMeta.Labels["deploymentconfig"] = utils.DeploymentConfigName("con", existing)
-	existing.ObjectMeta.Labels["metrics"] = utils.MakeInstanceName(consumer)
+	existing.ObjectMeta.Labels["metrics"] = "iot-simulator"
 	existing.ObjectMeta.Labels["iot.simulator"] = consumer.Spec.Simulator
 
 	existing.Spec.Ports = []corev1.ServicePort{

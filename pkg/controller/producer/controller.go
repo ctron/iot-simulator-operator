@@ -171,7 +171,7 @@ func (r *ReconcileProducer) configureService(producer *simv1alpha1.SimulatorProd
 
 	existing.ObjectMeta.Labels["app"] = utils.MakeInstanceName(producer)
 	existing.ObjectMeta.Labels["deploymentconfig"] = utils.DeploymentConfigName("prod", existing)
-	existing.ObjectMeta.Labels["metrics"] = utils.MakeInstanceName(producer)
+	existing.ObjectMeta.Labels["metrics"] = "iot-simulator"
 	existing.ObjectMeta.Labels["iot.simulator"] = producer.Spec.Simulator
 
 	existing.Spec.Ports = []corev1.ServicePort{
