@@ -18,8 +18,6 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/resource"
 
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	promv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/ctron/iot-simulator-operator/pkg/install/prometheus"
 
@@ -35,6 +33,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/ctron/operator-tools/pkg/install/rbac/role"
 	"github.com/ctron/operator-tools/pkg/install/rbac/rolebinding"
@@ -102,6 +101,10 @@ type ReconcileSimulator struct {
 	scheme *runtime.Scheme
 }
 
+func instanceName(instance metav1.Object, basename string) string {
+	return instance.GetName() + "-" + basename
+}
+
 func (r *ReconcileSimulator) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling Producer")
@@ -124,12 +127,14 @@ func (r *ReconcileSimulator) Reconcile(request reconcile.Request) (reconcile.Res
 
 	rec := recon.NewContext(context.TODO(), request, r.client, r.scheme)
 
+	ownerFn := mixin.ControllerOwner(instance)
 	sharedOwnerFn := mixin.ObjectOwner(instance)
 
 	// image streams
 
-	rec.Process(imagestream.EmptyImageStream("iot-simulator-base", sharedOwnerFn))
-	rec.Process(imagestream.EmptyImageStream("iot-simulator-parent", sharedOwnerFn))
+	rec.Process(imagestream.EmptyImageStream(instanceName(instance, "iot-simulator-base"), ownerFn))
+	rec.Process(imagestream.EmptyImageStream(instanceName(instance, "iot-simulator-parent"), ownerFn))
+
 	rec.Process(imagestream.EmptyImageStream("iot-simulator-console", sharedOwnerFn))
 
 	rec.Process(imagestream.DockerImageStream("centos", "7", "docker.io/centos:7", sharedOwnerFn))
@@ -163,7 +168,7 @@ func (r *ReconcileSimulator) Reconcile(request reconcile.Request) (reconcile.Res
 		build.SetDockerStrategyFromImageStream(config, "centos:7")
 		build.SetGitSource(config, "https://github.com/ctron/hono-simulator", "develop")
 		config.Spec.Source.ContextDir = "containers/base"
-		build.SetOutputImageStream(config, "iot-simulator-base:latest")
+		build.SetOutputImageStream(config, instanceName(instance, "iot-simulator-base")+":latest")
 		build.EnableDefaultTriggers(config)
 
 		return nil
@@ -173,9 +178,9 @@ func (r *ReconcileSimulator) Reconcile(request reconcile.Request) (reconcile.Res
 
 	rec.Process(build.ReconcileBuildConfigSimple("iot-simulator-parent", func(config *buildv1.BuildConfig) error {
 
-		build.SetDockerStrategyFromImageStream(config, "iot-simulator-base:latest")
+		build.SetDockerStrategyFromImageStream(config, instanceName(instance, "iot-simulator-base")+":latest")
 		build.SetGitSource(config, "https://github.com/ctron/hono-simulator", "develop")
-		build.SetOutputImageStream(config, "iot-simulator-parent:latest")
+		build.SetOutputImageStream(config, instanceName(instance, "iot-simulator-parent")+":latest")
 		build.EnableDefaultTriggers(config)
 
 		return nil
@@ -349,7 +354,7 @@ func (r *ReconcileSimulator) Reconcile(request reconcile.Request) (reconcile.Res
 	rec.Process(prometheus.ReconcilePrometheusSimple("iot-simulator-prometheus", func(prom *promv1.Prometheus) error {
 
 		prom.Spec.ServiceAccountName = "iot-simulator-prometheus"
-		prom.Spec.ServiceMonitorSelector = &v1.LabelSelector{
+		prom.Spec.ServiceMonitorSelector = &metav1.LabelSelector{
 			MatchLabels: map[string]string{
 				"metrics": "iot-simulator",
 			},

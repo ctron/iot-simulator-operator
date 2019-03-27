@@ -55,7 +55,7 @@ func SetOwnerReference(owner v1.Object, existingObject runtime.Object, scheme *r
 	return nil
 }
 
-func MakeHelmInstanceName(obj v1alpha1.SimulatorComponent) string {
+func MakeInstanceName(obj v1alpha1.SimulatorComponent) string {
 	if obj.GetCommonSpec().Simulator == "" {
 		return "iot-simulator"
 	} else {

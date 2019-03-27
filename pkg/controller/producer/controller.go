@@ -169,9 +169,9 @@ func (r *ReconcileProducer) configureService(producer *simv1alpha1.SimulatorProd
 		existing.ObjectMeta.Labels = map[string]string{}
 	}
 
-	existing.ObjectMeta.Labels["app"] = utils.MakeHelmInstanceName(producer)
+	existing.ObjectMeta.Labels["app"] = utils.MakeInstanceName(producer)
 	existing.ObjectMeta.Labels["deploymentconfig"] = utils.DeploymentConfigName("prod", existing)
-	existing.ObjectMeta.Labels["metrics"] = utils.MakeHelmInstanceName(producer)
+	existing.ObjectMeta.Labels["metrics"] = utils.MakeInstanceName(producer)
 	existing.ObjectMeta.Labels["iot.simulator"] = producer.Spec.Simulator
 
 	existing.Spec.Ports = []corev1.ServicePort{
@@ -182,7 +182,7 @@ func (r *ReconcileProducer) configureService(producer *simv1alpha1.SimulatorProd
 		},
 	}
 	existing.Spec.Selector = map[string]string{
-		"app":              utils.MakeHelmInstanceName(producer),
+		"app":              utils.MakeInstanceName(producer),
 		"deploymentconfig": existing.Name,
 	}
 
@@ -204,7 +204,7 @@ func (r *ReconcileProducer) configureDeploymentConfig(producer *simv1alpha1.Simu
 		protocol = simv1alpha1.ProtocolHttp
 	}
 
-	existing.ObjectMeta.Labels["app"] = utils.MakeHelmInstanceName(producer)
+	existing.ObjectMeta.Labels["app"] = utils.MakeInstanceName(producer)
 	existing.ObjectMeta.Labels["deploymentconfig"] = utils.DeploymentConfigName("prod", existing)
 	existing.ObjectMeta.Labels["iot.simulator.tenant"] = producer.Spec.Tenant
 	existing.ObjectMeta.Labels["iot.simulator"] = producer.Spec.Simulator
@@ -214,7 +214,7 @@ func (r *ReconcileProducer) configureDeploymentConfig(producer *simv1alpha1.Simu
 
 	existing.Spec.Replicas = producer.Spec.Replicas
 	existing.Spec.Selector = map[string]string{
-		"app":              utils.MakeHelmInstanceName(producer),
+		"app":              utils.MakeInstanceName(producer),
 		"deploymentconfig": utils.DeploymentConfigName("prod", existing),
 	}
 
@@ -228,7 +228,7 @@ func (r *ReconcileProducer) configureDeploymentConfig(producer *simv1alpha1.Simu
 		existing.Spec.Template.ObjectMeta.Labels = make(map[string]string)
 	}
 
-	existing.Spec.Template.ObjectMeta.Labels["app"] = utils.MakeHelmInstanceName(producer)
+	existing.Spec.Template.ObjectMeta.Labels["app"] = utils.MakeInstanceName(producer)
 	existing.Spec.Template.ObjectMeta.Labels["deploymentconfig"] = utils.DeploymentConfigName("prod", existing)
 	existing.Spec.Template.ObjectMeta.Labels["iot.simulator.tenant"] = producer.Spec.Tenant
 	existing.Spec.Template.ObjectMeta.Labels["iot.simulator"] = producer.Spec.Simulator
@@ -292,7 +292,7 @@ func (r *ReconcileProducer) configureDeploymentConfig(producer *simv1alpha1.Simu
 	existing.Spec.Triggers[1].ImageChangeParams.Automatic = true
 	existing.Spec.Triggers[1].ImageChangeParams.ContainerNames = []string{"producer"}
 	existing.Spec.Triggers[1].ImageChangeParams.From.Kind = "ImageStreamTag"
-	existing.Spec.Triggers[1].ImageChangeParams.From.Name = utils.MakeHelmInstanceName(producer) + "-parent:latest"
+	existing.Spec.Triggers[1].ImageChangeParams.From.Name = utils.MakeInstanceName(producer) + "-parent:latest"
 
 	// now apply http specifics
 

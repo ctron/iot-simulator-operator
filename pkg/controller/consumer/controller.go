@@ -145,9 +145,9 @@ func (r *ReconcileConsumer) configureService(consumer *simv1alpha1.SimulatorCons
 		existing.ObjectMeta.Labels = map[string]string{}
 	}
 
-	existing.ObjectMeta.Labels["app"] = utils.MakeHelmInstanceName(consumer)
+	existing.ObjectMeta.Labels["app"] = utils.MakeInstanceName(consumer)
 	existing.ObjectMeta.Labels["deploymentconfig"] = utils.DeploymentConfigName("con", existing)
-	existing.ObjectMeta.Labels["metrics"] = utils.MakeHelmInstanceName(consumer)
+	existing.ObjectMeta.Labels["metrics"] = utils.MakeInstanceName(consumer)
 	existing.ObjectMeta.Labels["iot.simulator"] = consumer.Spec.Simulator
 
 	existing.Spec.Ports = []corev1.ServicePort{
@@ -157,7 +157,7 @@ func (r *ReconcileConsumer) configureService(consumer *simv1alpha1.SimulatorCons
 		},
 	}
 	existing.Spec.Selector = map[string]string{
-		"app":              utils.MakeHelmInstanceName(consumer),
+		"app":              utils.MakeInstanceName(consumer),
 		"deploymentconfig": existing.Name,
 	}
 
@@ -198,7 +198,7 @@ func (r *ReconcileConsumer) configureDeploymentConfig(consumer *simv1alpha1.Simu
 		messageType = "telemetry"
 	}
 
-	existing.ObjectMeta.Labels["app"] = utils.MakeHelmInstanceName(consumer)
+	existing.ObjectMeta.Labels["app"] = utils.MakeInstanceName(consumer)
 	existing.ObjectMeta.Labels["deploymentconfig"] = utils.DeploymentConfigName("con", existing)
 	existing.ObjectMeta.Labels["iot.simulator.tenant"] = consumer.Spec.Tenant
 	existing.ObjectMeta.Labels["iot.simulator"] = consumer.Spec.Simulator
@@ -207,7 +207,7 @@ func (r *ReconcileConsumer) configureDeploymentConfig(consumer *simv1alpha1.Simu
 
 	existing.Spec.Replicas = consumer.Spec.Replicas
 	existing.Spec.Selector = map[string]string{
-		"app":              utils.MakeHelmInstanceName(consumer),
+		"app":              utils.MakeInstanceName(consumer),
 		"deploymentconfig": utils.DeploymentConfigName("con", existing),
 	}
 
@@ -221,7 +221,7 @@ func (r *ReconcileConsumer) configureDeploymentConfig(consumer *simv1alpha1.Simu
 		existing.Spec.Template.ObjectMeta.Labels = make(map[string]string)
 	}
 
-	existing.Spec.Template.ObjectMeta.Labels["app"] = utils.MakeHelmInstanceName(consumer)
+	existing.Spec.Template.ObjectMeta.Labels["app"] = utils.MakeInstanceName(consumer)
 	existing.Spec.Template.ObjectMeta.Labels["deploymentconfig"] = utils.DeploymentConfigName("con", existing)
 	existing.Spec.Template.ObjectMeta.Labels["iot.simulator.tenant"] = consumer.Spec.Tenant
 	existing.Spec.Template.ObjectMeta.Labels["iot.simulator"] = consumer.Spec.Simulator
@@ -283,6 +283,6 @@ func (r *ReconcileConsumer) configureDeploymentConfig(consumer *simv1alpha1.Simu
 	existing.Spec.Triggers[1].ImageChangeParams.Automatic = true
 	existing.Spec.Triggers[1].ImageChangeParams.ContainerNames = []string{"consumer"}
 	existing.Spec.Triggers[1].ImageChangeParams.From.Kind = "ImageStreamTag"
-	existing.Spec.Triggers[1].ImageChangeParams.From.Name = utils.MakeHelmInstanceName(consumer) + "-parent:latest"
+	existing.Spec.Triggers[1].ImageChangeParams.From.Name = utils.MakeInstanceName(consumer) + "-parent:latest"
 
 }

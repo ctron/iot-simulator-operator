@@ -1,0 +1,151 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: ClusterServiceVersion
+metadata:
+  name: iot-simulator.v0.1.0
+  namespace: iot-simulator
+  annotations:
+    categories: "Streaming & Messaging"
+    certified: "false"
+    description: An IoT device simulator, simulating producers and consumer for Eclipse Hono
+    containerImage: ctron/iot-simulator-operator:latest
+    createdAt: 2019-03-19T00:00:00Z
+    support: none
+    capabilities: Seamless Upgrades
+    repository: https://github.com/ctron/iot-simulator-operator
+
+spec:
+  maturity: alpha
+  displayName: IoT simulator
+  description: >
+    Foo bar
+  version: 0.1.0
+  keywords: ['iot', 'messaging', 'amqp', 'mqtt', 'http']
+  labels:
+    app: iot-simulator
+  selector:
+    matchLabels:
+      app: iot-simulator
+
+  links:
+    - name: IoT Simulator
+      url: https://github.com/ctron/hono-simulator
+
+  maintainers:
+    - email: ctron@dentrassi.de
+      name: Jens Reimann
+
+  provider:
+    name: Jens Reimann
+
+  installModes:
+  - type: OwnNamespace
+    supported: true
+  - type: SingleNamespace
+    supported: false
+  - type: MultiNamespace
+    supported: false
+  - type: AllNamespaces
+    supported: false
+
+  install:
+    strategy: deployment
+    spec:
+      deployments:
+        - name: iot-simulator-operator
+          spec:
+            replicas: 1
+            selector:
+              matchLabels:
+                k8s-app: iot-simulator-operator
+            template:
+              metadata:
+                labels:
+                  k8s-app: iot-simulator-operator
+              spec:
+                serviceAccountName: iot-simulator-operator
+
+                containers:
+                  - name: operator
+                    image: 'docker.io/ctron/iot-simulator-operator:latest'
+                    imagePullPolicy: Always
+
+                    env:
+                      - name: WATCH_NAMESPACE
+                        valueFrom:
+                          fieldRef:
+                            fieldPath: metadata.namespace
+
+                    resources:
+                      limits:
+                        cpu: 200m
+                        memory: 100Mi
+                      requests:
+                        cpu: 100m
+                        memory: 50Mi
+
+      permissions:
+        - serviceAccountName: iot-simulator-operator
+          rules:
+            - apiGroups: [ "" ]
+              resources: [ "configmaps", "secrets", "pods", "serviceaccounts", "services" ]
+              verbs: [ "*" ]
+            - apiGroups: [ "rbac.authorization.k8s.io" ]
+              resources: [ "roles", "rolebindings" ]
+              verbs: [ "*" ]
+            - apiGroups: [ "apps.openshift.io" ]
+              resources: [ "deploymentconfigs" ]
+              verbs: [ "*" ]
+            - apiGroups: [ "image.openshift.io" ]
+              resources: [ "imagestreams" ]
+              verbs: [ "*" ]
+            - apiGroups: [ "build.openshift.io" ]
+              resources: [ "buildconfigs" ]
+              verbs: [ "*" ]
+            - apiGroups: [ "route.openshift.io" ]
+              resources: [ "routes" ]
+              verbs: [ "*" ]
+            - apiGroups: [ "iot.dentrassi.de" ]
+              resources: [ "simulators", "simulatorconsumers", "simulatorproducers" ]
+              verbs: [ "*" ]
+            - apiGroups: [ "monitoring.coreos.com" ]
+              resources: [ "prometheuses", "servicemonitors" ]
+              verbs: [ "*" ]
+
+            - apiGroups: [""]
+              resources: ["endpoints", "pods"]
+              verbs: ["get", "list", "watch"]
+            - apiGroups: [""]
+              resources: ["cm"]
+              verbs: ["get"]
+
+  customresourcedefinitions:
+
+    owned:
+      - name: simulators.iot.dentrassi.de
+        version: v1alpha1
+        kind: Simulator
+        displayName: Simulator
+        description: A new simulator instance
+      - name: simulatorconsumers.iot.dentrassi.de
+        kind: SimulatorConsumer
+        version: v1alpha1
+        displayName: Simulator Consumer
+        description: A new consumer for an existing simulator instance
+      - name: simulatorproducers.iot.dentrassi.de
+        version: v1alpha1
+        kind: SimulatorProducer
+        displayName: Simulator Producer
+        description: A new producer for an existing simulator instance
+
+    required:
+      - name: prometheuses.monitoring.coreos.com
+        version: v1
+        kind: Prometheus
+        displayName: Prometheus
+        description: A prometheus instance
+
+      - name: servicemonitors.monitoring.coreos.com
+        version: v1
+        kind: ServiceMonitor
+        displayName: ServiceMonitor
+        description: A prometheus service monitor
