@@ -68,6 +68,8 @@ generate "core" service Service corev1 "k8s.io/api/core/v1"
 generate "core" configmap ConfigMap corev1 "k8s.io/api/core/v1"
 generate "core" secret Secret corev1 "k8s.io/api/core/v1"
 
+generate "apps" deployment Deployment appsv1 "k8s.io/api/apps/v1"
+
 generate "rbac" role Role rbacv1 "k8s.io/api/rbac/v1"
 generate "rbac" rolebinding RoleBinding rbacv1 "k8s.io/api/rbac/v1"
 

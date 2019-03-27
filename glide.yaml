@@ -37,3 +37,4 @@ import:
     version: ^0.22
   - package: github.com/emicklei/go-restful
   - package: github.com/ctron/operator-tools
+    version: ^0.1.2

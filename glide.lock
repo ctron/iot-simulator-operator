@@ -1,5 +1,5 @@
-hash: 05d249dc5e06a01dc1a27237a939a94fb97154292615bcb276f5d9e04fb3cebe
-updated: 2019-03-27T11:27:18.23255067+01:00
+hash: 41f22b1e65eaeb816b13b32ad40d9225161b7222564720794fc3d08bf73d627e
+updated: 2019-03-27T17:56:38.559956175+01:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -17,7 +17,7 @@ imports:
   - pkg/apis/monitoring/v1
   - releases
 - name: github.com/ctron/operator-tools
-  version: 036685b1972d065f016a632e1d56dace5880d3aa
+  version: e4dda001c35288d4827e10771d48b304740fdaab
   subpackages:
   - pkg/install
   - pkg/install/core/configmap
@@ -25,6 +25,7 @@ imports:
   - pkg/install/core/service
   - pkg/install/core/serviceaccount
   - pkg/install/mixin
+  - pkg/install/openshift
   - pkg/install/openshift/build
   - pkg/install/openshift/dc
   - pkg/install/openshift/imagestream
@@ -153,6 +154,9 @@ imports:
   - webconsole/v1
 - name: github.com/openshift/client-go
   version: 431ec9a26e5021f35fa41ee9a89842db9bfdb370
+  subpackages:
+  - route/clientset/versioned/scheme
+  - route/clientset/versioned/typed/route/v1
 - name: github.com/operator-framework/operator-lifecycle-manager
   version: 2abd0e2b4d93b4100220204d429d68a9990a160b
 - name: github.com/operator-framework/operator-sdk

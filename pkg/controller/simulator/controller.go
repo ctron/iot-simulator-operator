@@ -17,7 +17,13 @@ import (
 	"context"
 	"strconv"
 
+	"github.com/ctron/operator-tools/pkg/install/apps/deployment"
+
+	"github.com/ctron/operator-tools/pkg/install"
+	"github.com/ctron/operator-tools/pkg/install/openshift/dc"
+
 	"github.com/ctron/operator-tools/pkg/install/core/secret"
+	"github.com/ctron/operator-tools/pkg/install/openshift"
 
 	"github.com/ctron/operator-tools/pkg/install/core/configmap"
 
@@ -32,10 +38,7 @@ import (
 
 	"github.com/ctron/operator-tools/pkg/install/core/service"
 
-	"github.com/ctron/operator-tools/pkg/install"
-
-	"github.com/ctron/operator-tools/pkg/install/openshift/dc"
-
+	kappsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -137,13 +140,15 @@ func (r *ReconcileSimulator) Reconcile(request reconcile.Request) (reconcile.Res
 
 	// image streams
 
-	rec.Process(imagestream.EmptyImageStream(instanceName(instance, "iot-simulator-base"), ownerFn))
-	rec.Process(imagestream.EmptyImageStream(instanceName(instance, "iot-simulator-parent"), ownerFn))
+	if openshift.IsOpenshift() {
+		rec.Process(imagestream.EmptyImageStream(instanceName(instance, "iot-simulator-base"), ownerFn))
+		rec.Process(imagestream.EmptyImageStream(instanceName(instance, "iot-simulator-parent"), ownerFn))
 
-	rec.Process(imagestream.EmptyImageStream("iot-simulator-console", sharedOwnerFn))
+		rec.Process(imagestream.EmptyImageStream("iot-simulator-console", sharedOwnerFn))
 
-	rec.Process(imagestream.DockerImageStream("centos", "7", "docker.io/centos:7", sharedOwnerFn))
-	rec.Process(imagestream.DockerImageStream("fedora", "29", "docker.io/fedora:29", sharedOwnerFn))
+		rec.Process(imagestream.DockerImageStream("centos", "7", "docker.io/centos:7", sharedOwnerFn))
+		rec.Process(imagestream.DockerImageStream("fedora", "29", "docker.io/fedora:29", sharedOwnerFn))
+	}
 
 	// iot-simulator-console
 
@@ -168,171 +173,51 @@ func (r *ReconcileSimulator) Reconcile(request reconcile.Request) (reconcile.Res
 
 	// build configs
 
-	rec.Process(build.ReconcileBuildConfigSimple("iot-simulator-base", func(config *buildv1.BuildConfig) error {
+	if openshift.IsOpenshift() {
+		rec.Process(build.ReconcileBuildConfigSimple("iot-simulator-base", func(config *buildv1.BuildConfig) error {
 
-		build.SetDockerStrategyFromImageStream(config, "centos:7")
-		build.SetGitSource(config, "https://github.com/ctron/hono-simulator", "develop")
-		config.Spec.Source.ContextDir = "containers/base"
-		build.SetOutputImageStream(config, instanceName(instance, "iot-simulator-base")+":latest")
-		build.EnableDefaultTriggers(config)
+			build.SetDockerStrategyFromImageStream(config, "centos:7")
+			build.SetGitSource(config, "https://github.com/ctron/hono-simulator", "develop")
+			config.Spec.Source.ContextDir = "containers/base"
+			build.SetOutputImageStream(config, instanceName(instance, "iot-simulator-base")+":latest")
+			build.EnableDefaultTriggers(config)
 
-		return nil
-	}, mixin.Mix(
-		sharedOwnerFn,
-	)))
+			return nil
+		}, mixin.Mix(
+			sharedOwnerFn,
+		)))
 
-	rec.Process(build.ReconcileBuildConfigSimple("iot-simulator-parent", func(config *buildv1.BuildConfig) error {
+		rec.Process(build.ReconcileBuildConfigSimple("iot-simulator-parent", func(config *buildv1.BuildConfig) error {
 
-		build.SetDockerStrategyFromImageStream(config, instanceName(instance, "iot-simulator-base")+":latest")
-		build.SetGitSource(config, "https://github.com/ctron/hono-simulator", "develop")
-		build.SetOutputImageStream(config, instanceName(instance, "iot-simulator-parent")+":latest")
-		build.EnableDefaultTriggers(config)
+			build.SetDockerStrategyFromImageStream(config, instanceName(instance, "iot-simulator-base")+":latest")
+			build.SetGitSource(config, "https://github.com/ctron/hono-simulator", "develop")
+			build.SetOutputImageStream(config, instanceName(instance, "iot-simulator-parent")+":latest")
+			build.EnableDefaultTriggers(config)
 
-		return nil
-	}, mixin.Mix(
-		sharedOwnerFn,
-	)))
+			return nil
+		}, mixin.Mix(
+			sharedOwnerFn,
+		)))
 
-	rec.Process(build.ReconcileBuildConfigSimple("iot-simulator-console", func(config *buildv1.BuildConfig) error {
+		rec.Process(build.ReconcileBuildConfigSimple("iot-simulator-console", func(config *buildv1.BuildConfig) error {
 
-		build.SetDockerStrategyFromImageStream(config, "fedora:29")
-		build.SetGitSource(config, "https://github.com/ctron/iot-simulator-console", "develop")
-		build.SetOutputImageStream(config, "iot-simulator-console:latest")
-		build.EnableDefaultTriggers(config)
+			build.SetDockerStrategyFromImageStream(config, "fedora:29")
+			build.SetGitSource(config, "https://github.com/ctron/iot-simulator-console", "develop")
+			build.SetOutputImageStream(config, "iot-simulator-console:latest")
+			build.EnableDefaultTriggers(config)
 
-		config.Spec.Strategy.DockerStrategy.DockerfilePath = "Dockerfile.s2i"
+			config.Spec.Strategy.DockerStrategy.DockerfilePath = "Dockerfile.s2i"
 
-		return nil
-	}, mixin.Mix(
-		sharedOwnerFn,
-	)))
+			return nil
+		}, mixin.Mix(
+			sharedOwnerFn,
+		)))
+
+	}
 
 	// deployments
 
-	rec.Process(dc.ReconcileDeploymentConfigSimple("iot-simulator-console", func(dc *appsv1.DeploymentConfig) error {
-
-		if dc.Labels == nil {
-			dc.Labels = make(map[string]string)
-		}
-		dc.Labels["app"] = "iot-simulator-console"
-		dc.Labels["deploymentconfig"] = dc.Name
-
-		dc.Spec.Selector = map[string]string{
-			"app":              dc.Labels["app"],
-			"deploymentconfig": dc.Labels["deploymentconfig"],
-		}
-
-		dc.Spec.Replicas = 1
-
-		// template
-
-		dc.Spec.Strategy.Type = appsv1.DeploymentStrategyTypeRolling
-
-		if dc.Spec.Template == nil {
-			dc.Spec.Template = &corev1.PodTemplateSpec{}
-		}
-
-		if dc.Spec.Template.ObjectMeta.Labels == nil {
-			dc.Spec.Template.ObjectMeta.Labels = make(map[string]string)
-		}
-
-		dc.Spec.Template.ObjectMeta.Labels["app"] = dc.Labels["app"]
-		dc.Spec.Template.ObjectMeta.Labels["deploymentconfig"] = dc.Labels["deploymentconfig"]
-
-		// template spec
-
-		dc.Spec.Template.Spec.ServiceAccountName = "iot-simulator-console"
-
-		// containers
-
-		if len(dc.Spec.Template.Spec.Containers) != 2 {
-			dc.Spec.Template.Spec.Containers = make([]corev1.Container, 2)
-		}
-
-		// container - console
-
-		dc.Spec.Template.Spec.Containers[0].Name = "console"
-		dc.Spec.Template.Spec.Containers[0].Image = "iot-simulator-console"
-		dc.Spec.Template.Spec.Containers[0].ImagePullPolicy = corev1.PullAlways
-
-		dc.Spec.Template.Spec.Containers[0].Env = []corev1.EnvVar{
-			{Name: "GIN_MODE", Value: "release"},
-			{Name: "PROMETHEUS_HOST", Value: "prometheus-operated"},
-			install.EnvVarNamespace("NAMESPACE"),
-		}
-
-		dc.Spec.Template.Spec.Containers[0].Ports = []corev1.ContainerPort{
-			{
-				ContainerPort: 8080,
-				Name:          "ui",
-				Protocol:      corev1.ProtocolTCP,
-			},
-		}
-
-		// container - oauth proxy
-
-		dc.Spec.Template.Spec.Containers[1].Name = "oauth-proxy"
-		dc.Spec.Template.Spec.Containers[1].Image = "openshift3/oauth-proxy"
-		dc.Spec.Template.Spec.Containers[1].ImagePullPolicy = corev1.PullIfNotPresent
-
-		dc.Spec.Template.Spec.Containers[1].Args = []string{
-			"--https-address=:8443",
-			"--provider=openshift",
-			"--openshift-service-account=iot-simulator-console",
-			"--upstream=http://localhost:8080",
-			"--tls-cert=/etc/tls/private/tls.crt",
-			"--tls-key=/etc/tls/private/tls.key",
-			"--cookie-secret=SECRET",
-		}
-
-		dc.Spec.Template.Spec.Containers[1].Ports = []corev1.ContainerPort{
-			{
-				ContainerPort: 8443,
-				Name:          "proxy",
-				Protocol:      corev1.ProtocolTCP,
-			},
-		}
-
-		if len(dc.Spec.Template.Spec.Containers[1].VolumeMounts) != 1 {
-			dc.Spec.Template.Spec.Containers[1].VolumeMounts = make([]corev1.VolumeMount, 1)
-		}
-		dc.Spec.Template.Spec.Containers[1].VolumeMounts[0].Name = "proxy-tls"
-		dc.Spec.Template.Spec.Containers[1].VolumeMounts[0].MountPath = "/etc/tls/private"
-
-		// triggers
-
-		if len(dc.Spec.Triggers) != 2 {
-			dc.Spec.Triggers = make([]appsv1.DeploymentTriggerPolicy, 2)
-		}
-
-		dc.Spec.Triggers[0].Type = appsv1.DeploymentTriggerOnConfigChange
-		dc.Spec.Triggers[1].Type = appsv1.DeploymentTriggerOnImageChange
-		if dc.Spec.Triggers[1].ImageChangeParams == nil {
-			dc.Spec.Triggers[1].ImageChangeParams = &appsv1.DeploymentTriggerImageChangeParams{}
-		}
-		dc.Spec.Triggers[1].ImageChangeParams.Automatic = true
-		dc.Spec.Triggers[1].ImageChangeParams.ContainerNames = []string{dc.Spec.Template.Spec.Containers[0].Name}
-		dc.Spec.Triggers[1].ImageChangeParams.From.Kind = "ImageStreamTag"
-		dc.Spec.Triggers[1].ImageChangeParams.From.Name = "iot-simulator-console:latest"
-
-		// volumes
-
-		if len(dc.Spec.Template.Spec.Volumes) != 1 {
-			dc.Spec.Template.Spec.Volumes = make([]corev1.Volume, 1)
-		}
-		dc.Spec.Template.Spec.Volumes[0].Name = "proxy-tls"
-		if dc.Spec.Template.Spec.Volumes[0].Secret == nil {
-			dc.Spec.Template.Spec.Volumes[0].Secret = &corev1.SecretVolumeSource{}
-		}
-		dc.Spec.Template.Spec.Volumes[0].Secret.SecretName = "iot-simulator-console-tls"
-
-		// return
-
-		return nil
-
-	}, mixin.Mix(
-		sharedOwnerFn,
-	)))
+	r.processConsoleDeployment(rec, sharedOwnerFn)
 
 	rec.Process(service.Service("iot-simulator-console", map[string]string{
 		"app":              "iot-simulator-console",
@@ -436,4 +321,187 @@ func (r *ReconcileSimulator) Reconcile(request reconcile.Request) (reconcile.Res
 	}, ownerFn))
 
 	return rec.Result()
+}
+
+func (r *ReconcileSimulator) applyConsoleDeployment(obj metav1.Object) {
+
+	labels := obj.GetLabels()
+	if labels == nil {
+		labels = make(map[string]string)
+	}
+
+	labels["app"] = "iot-simulator-console"
+	labels["deploymentconfig"] = obj.GetName()
+
+	obj.SetLabels(labels)
+
+}
+
+func (r *ReconcileSimulator) processConsoleDeployment(rec recon.Reconcile, sharedOwnerFn install.MixIn) {
+
+	rec.Process(deployment.ReconcileDeploymentSimple("iot-simulator-console", func(deployment *kappsv1.Deployment) error {
+
+		r.applyConsoleDeployment(deployment)
+
+		if deployment.Spec.Selector == nil {
+			deployment.Spec.Selector = &metav1.LabelSelector{}
+		}
+
+		deployment.Spec.Selector.MatchLabels = map[string]string{
+			"app":              deployment.Labels["app"],
+			"deploymentconfig": deployment.Labels["deploymentconfig"],
+		}
+
+		var ONE int32 = 1
+		deployment.Spec.Replicas = &ONE
+
+		r.applyConsolePodSpec(deployment, &deployment.Spec.Template)
+
+		deployment.Spec.Template.Spec.Containers[0].Image = "docker.io/ctron/iot-simulator-console:latest"
+
+		return nil
+	}, sharedOwnerFn))
+}
+
+func (r *ReconcileSimulator) processConsoleDeploymentConfig(rec recon.Reconcile, sharedOwnerFn install.MixIn) {
+
+	rec.Process(dc.ReconcileDeploymentConfigSimple("iot-simulator-console", func(dc *appsv1.DeploymentConfig) error {
+
+		r.applyConsoleDeployment(dc)
+
+		dc.Spec.Selector = map[string]string{
+			"app":              dc.Labels["app"],
+			"deploymentconfig": dc.Labels["deploymentconfig"],
+		}
+
+		dc.Spec.Replicas = 1
+
+		// template
+
+		dc.Spec.Strategy.Type = appsv1.DeploymentStrategyTypeRolling
+
+		if dc.Spec.Template == nil {
+			dc.Spec.Template = &corev1.PodTemplateSpec{}
+		}
+
+		r.applyConsolePodSpec(dc, dc.Spec.Template)
+
+		// triggers
+
+		if len(dc.Spec.Triggers) != 2 {
+			dc.Spec.Triggers = make([]appsv1.DeploymentTriggerPolicy, 2)
+		}
+
+		dc.Spec.Triggers[0].Type = appsv1.DeploymentTriggerOnConfigChange
+		dc.Spec.Triggers[1].Type = appsv1.DeploymentTriggerOnImageChange
+		if dc.Spec.Triggers[1].ImageChangeParams == nil {
+			dc.Spec.Triggers[1].ImageChangeParams = &appsv1.DeploymentTriggerImageChangeParams{}
+		}
+		dc.Spec.Triggers[1].ImageChangeParams.Automatic = true
+		dc.Spec.Triggers[1].ImageChangeParams.ContainerNames = []string{dc.Spec.Template.Spec.Containers[0].Name}
+		dc.Spec.Triggers[1].ImageChangeParams.From.Kind = "ImageStreamTag"
+		dc.Spec.Triggers[1].ImageChangeParams.From.Name = "iot-simulator-console:latest"
+
+		// return
+
+		return nil
+
+	}, mixin.Mix(
+		sharedOwnerFn,
+	)))
+
+}
+
+func (r *ReconcileSimulator) applyConsolePodSpec(obj metav1.Object, spec *corev1.PodTemplateSpec) {
+
+	if spec.ObjectMeta.Labels == nil {
+		spec.ObjectMeta.Labels = make(map[string]string)
+	}
+
+	labels := obj.GetLabels()
+	spec.ObjectMeta.Labels["app"] = labels["app"]
+	spec.ObjectMeta.Labels["deploymentconfig"] = labels["deploymentconfig"]
+
+	// template spec
+
+	spec.Spec.ServiceAccountName = "iot-simulator-console"
+
+	// containers
+
+	var expectedContainers int
+	if openshift.IsOpenshift() {
+		expectedContainers = 2
+	} else {
+		expectedContainers = 1
+	}
+
+	if len(spec.Spec.Containers) != expectedContainers {
+		spec.Spec.Containers = make([]corev1.Container, expectedContainers)
+	}
+
+	// container - console
+
+	spec.Spec.Containers[0].Name = "console"
+	spec.Spec.Containers[0].Image = "iot-simulator-console"
+	spec.Spec.Containers[0].ImagePullPolicy = corev1.PullAlways
+
+	spec.Spec.Containers[0].Env = []corev1.EnvVar{
+		{Name: "GIN_MODE", Value: "release"},
+		{Name: "PROMETHEUS_HOST", Value: "prometheus-operated"},
+		install.EnvVarNamespace("NAMESPACE"),
+	}
+
+	spec.Spec.Containers[0].Ports = []corev1.ContainerPort{
+		{
+			ContainerPort: 8080,
+			Name:          "ui",
+			Protocol:      corev1.ProtocolTCP,
+		},
+	}
+
+	if openshift.IsOpenshift() {
+
+		// container - oauth proxy
+
+		spec.Spec.Containers[1].Name = "oauth-proxy"
+		spec.Spec.Containers[1].Image = "openshift3/oauth-proxy"
+		spec.Spec.Containers[1].ImagePullPolicy = corev1.PullIfNotPresent
+
+		spec.Spec.Containers[1].Args = []string{
+			"--https-address=:8443",
+			"--provider=openshift",
+			"--openshift-service-account=iot-simulator-console",
+			"--upstream=http://localhost:8080",
+			"--tls-cert=/etc/tls/private/tls.crt",
+			"--tls-key=/etc/tls/private/tls.key",
+			"--cookie-secret=SECRET",
+		}
+
+		spec.Spec.Containers[1].Ports = []corev1.ContainerPort{
+			{
+				ContainerPort: 8443,
+				Name:          "proxy",
+				Protocol:      corev1.ProtocolTCP,
+			},
+		}
+
+		if len(spec.Spec.Containers[1].VolumeMounts) != 1 {
+			spec.Spec.Containers[1].VolumeMounts = make([]corev1.VolumeMount, 1)
+		}
+		spec.Spec.Containers[1].VolumeMounts[0].Name = "proxy-tls"
+		spec.Spec.Containers[1].VolumeMounts[0].MountPath = "/etc/tls/private"
+
+		// volumes
+
+		if len(spec.Spec.Volumes) != 1 {
+			spec.Spec.Volumes = make([]corev1.Volume, 1)
+		}
+		spec.Spec.Volumes[0].Name = "proxy-tls"
+		if spec.Spec.Volumes[0].Secret == nil {
+			spec.Spec.Volumes[0].Secret = &corev1.SecretVolumeSource{}
+		}
+		spec.Spec.Volumes[0].Secret.SecretName = "iot-simulator-console-tls"
+
+	}
+
 }

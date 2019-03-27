@@ -38,6 +38,7 @@ type reconcileContext struct {
 }
 
 var _ InstallContext = &reconcileContext{}
+var _ Reconcile = &reconcileContext{}
 
 func (r *reconcileContext) GetClient() client.Client {
 	return r.client
@@ -69,6 +70,15 @@ type InstallContext interface {
 	GetContext() context.Context
 	GetScheme() *runtime.Scheme
 	GetRequest() reconcile.Request
+}
+
+type Reconcile interface {
+	Process(processor Processor)
+	ProcessSimple(processor SimpleProcessor)
+
+	NeedRequeue() bool
+	Error() error
+	Result() (reconcile.Result, error)
 }
 
 type Processor func(ctx InstallContext) (reconcile.Result, error)
