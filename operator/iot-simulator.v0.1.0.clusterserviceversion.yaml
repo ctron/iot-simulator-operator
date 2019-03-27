@@ -105,7 +105,13 @@ spec:
               resources: [ "routes" ]
               verbs: [ "*" ]
             - apiGroups: [ "iot.dentrassi.de" ]
-              resources: [ "simulators", "simulatorconsumers", "simulatorproducers" ]
+              resources:
+                - "simulators"
+                - "simulators/finalizers"
+                - "simulatorconsumers"
+                - "simulatorconsumers/finalizers"
+                - "simulatorproducers"
+                - "simulatorproducers/finalizers"
               verbs: [ "*" ]
             - apiGroups: [ "monitoring.coreos.com" ]
               resources: [ "prometheuses", "servicemonitors" ]
