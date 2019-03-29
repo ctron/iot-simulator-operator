@@ -2,7 +2,7 @@ apiVersion: operators.coreos.com/v1alpha1
 kind: ClusterServiceVersion
 metadata:
   name: iot-simulator.v0.1.0
-  namespace: iot-simulator
+  namespace: placeholder
   annotations:
     categories: "Streaming & Messaging"
     certified: "false"
