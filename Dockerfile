@@ -19,4 +19,6 @@ RUN dnf -y install golang && \
     dnf -y history undo last && dnf -y clean all && \
     true
 
+ENV IMAGE_TAG=":latest"
+
 ENTRYPOINT /iot-simulator-operator

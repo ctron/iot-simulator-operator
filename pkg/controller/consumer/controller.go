@@ -16,6 +16,10 @@ package consumer
 import (
 	"context"
 
+	"github.com/ctron/iot-simulator-operator/pkg/images"
+
+	"github.com/ctron/operator-tools/pkg/install/openshift"
+
 	"github.com/ctron/iot-simulator-operator/pkg/controller/common"
 
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -26,6 +30,7 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	kappsv1 "k8s.io/api/apps/v1"
 	"k8s.io/api/core/v1"
 	corev1 "k8s.io/api/core/v1"
 
@@ -102,7 +107,12 @@ func (r *ReconcileConsumer) Reconcile(request reconcile.Request) (reconcile.Resu
 		return reconcile.Result{}, err
 	}
 
-	err = r.reconcileDeploymentConfig(request, instance)
+	if openshift.IsOpenshift() {
+		err = r.reconcileDeploymentConfig(request, instance)
+	} else {
+		err = r.reconcileDeployment(request, instance)
+	}
+
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -186,56 +196,74 @@ func (r *ReconcileConsumer) reconcileDeploymentConfig(request reconcile.Request,
 	return err
 }
 
-func (r *ReconcileConsumer) configureDeploymentConfig(consumer *simv1alpha1.SimulatorConsumer, existing *appsv1.DeploymentConfig) {
-
-	if existing.ObjectMeta.Labels == nil {
-		existing.ObjectMeta.Labels = map[string]string{}
+func (r *ReconcileConsumer) reconcileDeployment(request reconcile.Request, instance *simv1alpha1.SimulatorConsumer) error {
+	dc := appsv1.DeploymentConfig{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      utils.DeploymentConfigName("con", instance),
+			Namespace: request.Namespace,
+		},
 	}
 
-	simulatorName := consumer.Spec.Simulator
+	_, err := controllerutil.CreateOrUpdate(context.TODO(), r.client, &dc, func(existingObject runtime.Object) error {
+
+		if err := utils.SetOwnerReference(instance, existingObject, r.scheme); err != nil {
+			return err
+		}
+
+		existing := existingObject.(*kappsv1.Deployment)
+		r.configureDeployment(instance, existing)
+
+		return nil
+	})
+
+	return err
+}
+
+func (r *ReconcileConsumer) applyConsumerPodSpec(consumer *simv1alpha1.SimulatorConsumer, obj metav1.Object, pod *corev1.PodTemplateSpec) {
+
+	labels := obj.GetLabels()
+
+	if labels == nil {
+		labels = map[string]string{}
+	}
+
 	messageType := consumer.Spec.Type
 	if messageType == "" {
 		messageType = "telemetry"
 	}
 
-	existing.ObjectMeta.Labels["app"] = utils.MakeInstanceName(consumer)
-	existing.ObjectMeta.Labels["deploymentconfig"] = utils.DeploymentConfigName("con", existing)
-	existing.ObjectMeta.Labels["iot.simulator.tenant"] = consumer.Spec.Tenant
-	existing.ObjectMeta.Labels["iot.simulator"] = consumer.Spec.Simulator
-	existing.ObjectMeta.Labels["iot.simulator.app"] = "consumer"
-	existing.ObjectMeta.Labels["iot.simulator.message.type"] = messageType
+	labels["app"] = utils.MakeInstanceName(consumer)
+	labels["deploymentconfig"] = utils.DeploymentConfigName("con", obj)
+	labels["iot.simulator.tenant"] = consumer.Spec.Tenant
+	labels["iot.simulator"] = consumer.Spec.Simulator
+	labels["iot.simulator.app"] = "consumer"
+	labels["iot.simulator.message.type"] = messageType
 
-	existing.Spec.Replicas = consumer.Spec.Replicas
-	existing.Spec.Selector = map[string]string{
-		"app":              utils.MakeInstanceName(consumer),
-		"deploymentconfig": utils.DeploymentConfigName("con", existing),
+	obj.SetLabels(labels)
+
+	// template
+
+	simulatorName := consumer.Spec.Simulator
+
+	if pod.ObjectMeta.Labels == nil {
+		pod.ObjectMeta.Labels = make(map[string]string)
 	}
 
-	existing.Spec.Strategy.Type = appsv1.DeploymentStrategyTypeRolling
-
-	if existing.Spec.Template == nil {
-		existing.Spec.Template = &v1.PodTemplateSpec{}
-	}
-
-	if existing.Spec.Template.ObjectMeta.Labels == nil {
-		existing.Spec.Template.ObjectMeta.Labels = make(map[string]string)
-	}
-
-	existing.Spec.Template.ObjectMeta.Labels["app"] = utils.MakeInstanceName(consumer)
-	existing.Spec.Template.ObjectMeta.Labels["deploymentconfig"] = utils.DeploymentConfigName("con", existing)
-	existing.Spec.Template.ObjectMeta.Labels["iot.simulator.tenant"] = consumer.Spec.Tenant
-	existing.Spec.Template.ObjectMeta.Labels["iot.simulator"] = consumer.Spec.Simulator
+	pod.ObjectMeta.Labels["app"] = labels["app"]
+	pod.ObjectMeta.Labels["deploymentconfig"] = labels["deploymentconfig"]
+	pod.ObjectMeta.Labels["iot.simulator.tenant"] = consumer.Spec.Tenant
+	pod.ObjectMeta.Labels["iot.simulator"] = consumer.Spec.Simulator
 
 	// container
 
-	if len(existing.Spec.Template.Spec.Containers) != 1 {
-		existing.Spec.Template.Spec.Containers = make([]corev1.Container, 1)
+	if len(pod.Spec.Containers) != 1 {
+		pod.Spec.Containers = make([]corev1.Container, 1)
 	}
 
-	existing.Spec.Template.Spec.Containers[0].Name = "consumer"
-	existing.Spec.Template.Spec.Containers[0].Command = []string{"java", "-Dvertx.cacheDirBase=/tmp", "-Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.SLF4JLogDelegateFactory", "-jar", "/build/simulator-consumer/target/simulator-consumer-app.jar"}
-	existing.Spec.Template.Spec.Containers[0].Env = []v1.EnvVar{
-		{Name: "CONSUMING", Value: messageType},
+	pod.Spec.Containers[0].Name = "consumer"
+	pod.Spec.Containers[0].Command = []string{"java", "-Dvertx.cacheDirBase=/tmp", "-Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.SLF4JLogDelegateFactory", "-jar", "/build/simulator-consumer/target/simulator-consumer-app.jar"}
+	pod.Spec.Containers[0].Env = []v1.EnvVar{
+		{Name: "CONSUMING", ValueFrom: &v1.EnvVarSource{FieldRef: &v1.ObjectFieldSelector{APIVersion: "v1", FieldPath: "metadata.labels['iot.simulator.message.type']"}}},
 		{Name: "HONO_TRUSTED_CERTS", Value: "/etc/secrets/messaging.ca.crt"},
 		{Name: "HONO_INITIAL_CREDITS", Value: "100"},
 		{Name: "HONO_TENANT", ValueFrom: &v1.EnvVarSource{FieldRef: &v1.ObjectFieldSelector{APIVersion: "v1", FieldPath: "metadata.labels['iot.simulator.tenant']"}}},
@@ -245,7 +273,7 @@ func (r *ReconcileConsumer) configureDeploymentConfig(consumer *simv1alpha1.Simu
 		{Name: "MESSAGING_SERVICE_HOST", ValueFrom: &v1.EnvVarSource{ConfigMapKeyRef: &v1.ConfigMapKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: simulatorName}, Key: "endpoint.host"}}},
 		{Name: "MESSAGING_SERVICE_PORT_AMQP", ValueFrom: &v1.EnvVarSource{ConfigMapKeyRef: &v1.ConfigMapKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: simulatorName}, Key: "endpoint.port"}}},
 	}
-	existing.Spec.Template.Spec.Containers[0].Ports = []v1.ContainerPort{
+	pod.Spec.Containers[0].Ports = []v1.ContainerPort{
 		{
 			ContainerPort: 8081,
 			Name:          "metrics",
@@ -255,33 +283,70 @@ func (r *ReconcileConsumer) configureDeploymentConfig(consumer *simv1alpha1.Simu
 
 	// volumes
 
-	if len(existing.Spec.Template.Spec.Containers[0].VolumeMounts) != 1 {
-		existing.Spec.Template.Spec.Containers[0].VolumeMounts = make([]corev1.VolumeMount, 1)
+	if len(pod.Spec.Containers[0].VolumeMounts) != 1 {
+		pod.Spec.Containers[0].VolumeMounts = make([]corev1.VolumeMount, 1)
 	}
-	existing.Spec.Template.Spec.Containers[0].VolumeMounts[0].Name = "secrets"
-	existing.Spec.Template.Spec.Containers[0].VolumeMounts[0].MountPath = "/etc/secrets"
+	pod.Spec.Containers[0].VolumeMounts[0].Name = "secrets"
+	pod.Spec.Containers[0].VolumeMounts[0].MountPath = "/etc/secrets"
 
-	if len(existing.Spec.Template.Spec.Volumes) != 1 {
-		existing.Spec.Template.Spec.Volumes = make([]corev1.Volume, 1)
+	if len(pod.Spec.Volumes) != 1 {
+		pod.Spec.Volumes = make([]corev1.Volume, 1)
 	}
-	existing.Spec.Template.Spec.Volumes[0].Name = "secrets"
-	if existing.Spec.Template.Spec.Volumes[0].Secret == nil {
-		existing.Spec.Template.Spec.Volumes[0].Secret = &corev1.SecretVolumeSource{}
+	pod.Spec.Volumes[0].Name = "secrets"
+	if pod.Spec.Volumes[0].Secret == nil {
+		pod.Spec.Volumes[0].Secret = &corev1.SecretVolumeSource{}
 	}
-	existing.Spec.Template.Spec.Volumes[0].Secret.SecretName = consumer.Spec.Simulator
+	pod.Spec.Volumes[0].Secret.SecretName = consumer.Spec.Simulator
 
 	// health checks
 
-	existing.Spec.Template.Spec.Containers[0].LivenessProbe = common.ApplyProbe(existing.Spec.Template.Spec.Containers[0].LivenessProbe)
-	existing.Spec.Template.Spec.Containers[0].ReadinessProbe = common.ApplyProbe(existing.Spec.Template.Spec.Containers[0].ReadinessProbe)
+	pod.Spec.Containers[0].LivenessProbe = common.ApplyProbe(pod.Spec.Containers[0].LivenessProbe)
+	pod.Spec.Containers[0].ReadinessProbe = common.ApplyProbe(pod.Spec.Containers[0].ReadinessProbe)
 
 	// limits
 
-	existing.Spec.Template.Spec.Containers[0].Resources = corev1.ResourceRequirements{
+	pod.Spec.Containers[0].Resources = corev1.ResourceRequirements{
 		Limits: corev1.ResourceList{
 			corev1.ResourceMemory: *resource.NewQuantity(1024*1024*1024 /* 1024Mi */, resource.BinarySI),
 		},
 	}
+
+}
+
+func (r *ReconcileConsumer) configureDeployment(consumer *simv1alpha1.SimulatorConsumer, existing *kappsv1.Deployment) {
+
+	r.applyConsumerPodSpec(consumer, existing, &existing.Spec.Template)
+
+	existing.Spec.Replicas = &consumer.Spec.Replicas
+
+	if existing.Spec.Selector == nil {
+		existing.Spec.Selector = &metav1.LabelSelector{}
+	}
+
+	existing.Spec.Selector.MatchLabels = map[string]string{
+		"app":              existing.Labels["app"],
+		"deploymentconfig": existing.Labels["deploymentconfig"],
+	}
+
+	existing.Spec.Template.Spec.Containers[0].Image = images.SimulatorImage
+
+}
+
+func (r *ReconcileConsumer) configureDeploymentConfig(consumer *simv1alpha1.SimulatorConsumer, existing *appsv1.DeploymentConfig) {
+
+	if existing.Spec.Template == nil {
+		existing.Spec.Template = &v1.PodTemplateSpec{}
+	}
+
+	r.applyConsumerPodSpec(consumer, existing, existing.Spec.Template)
+
+	existing.Spec.Replicas = consumer.Spec.Replicas
+	existing.Spec.Selector = map[string]string{
+		"app":              existing.Labels["app"],
+		"deploymentconfig": existing.Labels["deploymentconfig"],
+	}
+
+	existing.Spec.Strategy.Type = appsv1.DeploymentStrategyTypeRolling
 
 	// triggers
 

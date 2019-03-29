@@ -17,6 +17,8 @@ import (
 	"context"
 	"strconv"
 
+	"github.com/ctron/iot-simulator-operator/pkg/images"
+
 	"github.com/ctron/operator-tools/pkg/install/apps/deployment"
 
 	"github.com/ctron/operator-tools/pkg/install"
@@ -357,7 +359,7 @@ func (r *ReconcileSimulator) processConsoleDeployment(rec recon.Reconcile, share
 
 		r.applyConsolePodSpec(deployment, &deployment.Spec.Template)
 
-		deployment.Spec.Template.Spec.Containers[0].Image = "docker.io/ctron/iot-simulator-console:latest"
+		deployment.Spec.Template.Spec.Containers[0].Image = images.ConsoleImage
 
 		return nil
 	}, sharedOwnerFn))
@@ -502,6 +504,6 @@ func (r *ReconcileSimulator) applyConsolePodSpec(obj metav1.Object, spec *corev1
 		}
 		spec.Spec.Volumes[0].Secret.SecretName = "iot-simulator-console-tls"
 
-	}
+	} // end isOpenshift
 
 }

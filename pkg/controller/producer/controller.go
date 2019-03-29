@@ -17,6 +17,10 @@ import (
 	"context"
 	"strconv"
 
+	"github.com/ctron/iot-simulator-operator/pkg/images"
+
+	"github.com/ctron/operator-tools/pkg/install/openshift"
+
 	"github.com/ctron/iot-simulator-operator/pkg/controller/common"
 
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -27,6 +31,7 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	kappsv1 "k8s.io/api/apps/v1"
 	"k8s.io/api/core/v1"
 	corev1 "k8s.io/api/core/v1"
 
@@ -103,7 +108,12 @@ func (r *ReconcileProducer) Reconcile(request reconcile.Request) (reconcile.Resu
 		return reconcile.Result{}, err
 	}
 
-	err = r.reconcileDeploymentConfig(request, instance)
+	if openshift.IsOpenshift() {
+		err = r.reconcileDeploymentConfig(request, instance)
+	} else {
+		err = r.reconcileDeployment(request, instance)
+	}
+
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -163,6 +173,29 @@ func (r *ReconcileProducer) reconcileDeploymentConfig(request reconcile.Request,
 	return err
 }
 
+func (r *ReconcileProducer) reconcileDeployment(request reconcile.Request, instance *simv1alpha1.SimulatorProducer) error {
+	dc := kappsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      utils.DeploymentConfigName("prod", instance),
+			Namespace: request.Namespace,
+		},
+	}
+
+	_, err := controllerutil.CreateOrUpdate(context.TODO(), r.client, &dc, func(existingObject runtime.Object) error {
+
+		if err := utils.SetOwnerReference(instance, existingObject, r.scheme); err != nil {
+			return err
+		}
+
+		existing := existingObject.(*kappsv1.Deployment)
+		r.configureDeployment(instance, existing)
+
+		return nil
+	})
+
+	return err
+}
+
 func (r *ReconcileProducer) configureService(producer *simv1alpha1.SimulatorProducer, existing *v1.Service) {
 
 	if existing.ObjectMeta.Labels == nil {
@@ -188,11 +221,15 @@ func (r *ReconcileProducer) configureService(producer *simv1alpha1.SimulatorProd
 
 }
 
-func (r *ReconcileProducer) configureDeploymentConfig(producer *simv1alpha1.SimulatorProducer, existing *appsv1.DeploymentConfig) {
+func (r *ReconcileProducer) applyPodSpec(producer *simv1alpha1.SimulatorProducer, obj metav1.Object, pod *corev1.PodTemplateSpec) {
 
-	if existing.ObjectMeta.Labels == nil {
-		existing.ObjectMeta.Labels = map[string]string{}
+	labels := obj.GetLabels()
+
+	if labels == nil {
+		labels = map[string]string{}
 	}
+
+	obj.SetLabels(labels)
 
 	simulatorName := producer.Spec.Simulator
 	messageType := producer.Spec.Type
@@ -204,45 +241,35 @@ func (r *ReconcileProducer) configureDeploymentConfig(producer *simv1alpha1.Simu
 		protocol = simv1alpha1.ProtocolHttp
 	}
 
-	existing.ObjectMeta.Labels["app"] = utils.MakeInstanceName(producer)
-	existing.ObjectMeta.Labels["deploymentconfig"] = utils.DeploymentConfigName("prod", existing)
-	existing.ObjectMeta.Labels["iot.simulator.tenant"] = producer.Spec.Tenant
-	existing.ObjectMeta.Labels["iot.simulator"] = producer.Spec.Simulator
-	existing.ObjectMeta.Labels["iot.simulator.app"] = "producer"
-	existing.ObjectMeta.Labels["iot.simulator.message.type"] = messageType
-	existing.ObjectMeta.Labels["iot.simulator.producer.protocol"] = string(protocol)
+	labels["app"] = utils.MakeInstanceName(producer)
+	labels["deploymentconfig"] = utils.DeploymentConfigName("prod", obj)
+	labels["iot.simulator.tenant"] = producer.Spec.Tenant
+	labels["iot.simulator"] = producer.Spec.Simulator
+	labels["iot.simulator.app"] = "producer"
+	labels["iot.simulator.message.type"] = messageType
+	labels["iot.simulator.producer.protocol"] = string(protocol)
 
-	existing.Spec.Replicas = producer.Spec.Replicas
-	existing.Spec.Selector = map[string]string{
-		"app":              utils.MakeInstanceName(producer),
-		"deploymentconfig": utils.DeploymentConfigName("prod", existing),
+	// template
+
+	if pod.ObjectMeta.Labels == nil {
+		pod.ObjectMeta.Labels = make(map[string]string)
 	}
 
-	existing.Spec.Strategy.Type = appsv1.DeploymentStrategyTypeRecreate
-
-	if existing.Spec.Template == nil {
-		existing.Spec.Template = &v1.PodTemplateSpec{}
-	}
-
-	if existing.Spec.Template.ObjectMeta.Labels == nil {
-		existing.Spec.Template.ObjectMeta.Labels = make(map[string]string)
-	}
-
-	existing.Spec.Template.ObjectMeta.Labels["app"] = utils.MakeInstanceName(producer)
-	existing.Spec.Template.ObjectMeta.Labels["deploymentconfig"] = utils.DeploymentConfigName("prod", existing)
-	existing.Spec.Template.ObjectMeta.Labels["iot.simulator.tenant"] = producer.Spec.Tenant
-	existing.Spec.Template.ObjectMeta.Labels["iot.simulator"] = producer.Spec.Simulator
+	pod.ObjectMeta.Labels["app"] = utils.MakeInstanceName(producer)
+	pod.ObjectMeta.Labels["deploymentconfig"] = utils.DeploymentConfigName("prod", obj)
+	pod.ObjectMeta.Labels["iot.simulator.tenant"] = producer.Spec.Tenant
+	pod.ObjectMeta.Labels["iot.simulator"] = producer.Spec.Simulator
 
 	// containers
 
-	if len(existing.Spec.Template.Spec.Containers) != 1 {
-		existing.Spec.Template.Spec.Containers = make([]corev1.Container, 1)
+	if len(pod.Spec.Containers) != 1 {
+		pod.Spec.Containers = make([]corev1.Container, 1)
 	}
 
-	existing.Spec.Template.Spec.Containers[0].Name = "producer"
-	existing.Spec.Template.Spec.Containers[0].Env = []v1.EnvVar{
+	pod.Spec.Containers[0].Name = "producer"
+	pod.Spec.Containers[0].Env = []v1.EnvVar{
 
-		{Name: "MESSAGE_TYPE", Value: messageType},
+		{Name: "MESSAGE_TYPE", ValueFrom: &v1.EnvVarSource{FieldRef: &v1.ObjectFieldSelector{APIVersion: "v1", FieldPath: "metadata.labels['iot.simulator.message.type']"}}},
 
 		{Name: "PERIOD_MS", Value: "1000"},
 		{Name: "NUM_DEVICES", Value: strconv.FormatUint(uint64(producer.Spec.NumberOfDevices), 10)},
@@ -252,12 +279,12 @@ func (r *ReconcileProducer) configureDeploymentConfig(producer *simv1alpha1.Simu
 	}
 
 	if producer.Spec.NumberOfThreads != nil {
-		existing.Spec.Template.Spec.Containers[0].Env = append(existing.Spec.Template.Spec.Containers[0].Env, v1.EnvVar{
+		pod.Spec.Containers[0].Env = append(pod.Spec.Containers[0].Env, v1.EnvVar{
 			Name: "NUM_THREADS", Value: strconv.FormatUint(uint64(*producer.Spec.NumberOfThreads), 10),
 		})
 	}
 
-	existing.Spec.Template.Spec.Containers[0].Ports = []v1.ContainerPort{
+	pod.Spec.Containers[0].Ports = []v1.ContainerPort{
 		{
 			ContainerPort: 8081,
 			Name:          "metrics",
@@ -267,16 +294,63 @@ func (r *ReconcileProducer) configureDeploymentConfig(producer *simv1alpha1.Simu
 
 	// health checks
 
-	existing.Spec.Template.Spec.Containers[0].LivenessProbe = common.ApplyProbe(existing.Spec.Template.Spec.Containers[0].LivenessProbe)
-	existing.Spec.Template.Spec.Containers[0].ReadinessProbe = common.ApplyProbe(existing.Spec.Template.Spec.Containers[0].ReadinessProbe)
+	pod.Spec.Containers[0].LivenessProbe = common.ApplyProbe(pod.Spec.Containers[0].LivenessProbe)
+	pod.Spec.Containers[0].ReadinessProbe = common.ApplyProbe(pod.Spec.Containers[0].ReadinessProbe)
 
 	// resource limits
 
-	existing.Spec.Template.Spec.Containers[0].Resources = corev1.ResourceRequirements{
+	pod.Spec.Containers[0].Resources = corev1.ResourceRequirements{
 		Limits: corev1.ResourceList{
 			corev1.ResourceMemory: *resource.NewQuantity(1024*1024*1024 /* 1024Mi */, resource.BinarySI),
 		},
 	}
+
+	// now apply protocol specifics
+
+	switch protocol {
+	case simv1alpha1.ProtocolMqtt:
+		pod.Spec.Containers[0].Env = append(pod.Spec.Containers[0].Env, mqttVariables(simulatorName)...)
+		r.configureMqtt(producer, pod, messageType)
+	default:
+		pod.Spec.Containers[0].Env = append(pod.Spec.Containers[0].Env, httpVariables(simulatorName)...)
+		r.configureHttp(producer, pod, messageType)
+	}
+
+}
+
+func (r *ReconcileProducer) configureDeployment(producer *simv1alpha1.SimulatorProducer, existing *kappsv1.Deployment) {
+
+	r.applyPodSpec(producer, existing, &existing.Spec.Template)
+
+	existing.Spec.Replicas = &producer.Spec.Replicas
+
+	if existing.Spec.Selector == nil {
+		existing.Spec.Selector = &metav1.LabelSelector{}
+	}
+
+	existing.Spec.Selector.MatchLabels = map[string]string{
+		"app":              existing.Labels["app"],
+		"deploymentconfig": existing.Labels["deploymentconfig"],
+	}
+
+	existing.Spec.Template.Spec.Containers[0].Image = images.SimulatorImage
+}
+
+func (r *ReconcileProducer) configureDeploymentConfig(producer *simv1alpha1.SimulatorProducer, existing *appsv1.DeploymentConfig) {
+
+	if existing.Spec.Template == nil {
+		existing.Spec.Template = &v1.PodTemplateSpec{}
+	}
+
+	r.applyPodSpec(producer, existing, existing.Spec.Template)
+
+	existing.Spec.Replicas = producer.Spec.Replicas
+	existing.Spec.Selector = map[string]string{
+		"app":              utils.MakeInstanceName(producer),
+		"deploymentconfig": utils.DeploymentConfigName("prod", existing),
+	}
+
+	existing.Spec.Strategy.Type = appsv1.DeploymentStrategyTypeRecreate
 
 	// triggers
 
@@ -294,22 +368,12 @@ func (r *ReconcileProducer) configureDeploymentConfig(producer *simv1alpha1.Simu
 	existing.Spec.Triggers[1].ImageChangeParams.From.Kind = "ImageStreamTag"
 	existing.Spec.Triggers[1].ImageChangeParams.From.Name = utils.MakeInstanceName(producer) + "-parent:latest"
 
-	// now apply http specifics
-
-	switch protocol {
-	case simv1alpha1.ProtocolMqtt:
-		existing.Spec.Template.Spec.Containers[0].Env = append(existing.Spec.Template.Spec.Containers[0].Env, mqttVariables(simulatorName)...)
-		r.configureMqtt(producer, existing, messageType)
-	default:
-		existing.Spec.Template.Spec.Containers[0].Env = append(existing.Spec.Template.Spec.Containers[0].Env, httpVariables(simulatorName)...)
-		r.configureHttp(producer, existing, messageType)
-	}
-
 }
 
-func (r *ReconcileProducer) configureMqtt(producer *simv1alpha1.SimulatorProducer, existing *appsv1.DeploymentConfig, messageType string) {
+func (r *ReconcileProducer) configureMqtt(producer *simv1alpha1.SimulatorProducer, pod *corev1.PodTemplateSpec, messageType string) {
 
-	existing.Spec.Template.Spec.Containers[0].Command = []string{"java",
+	pod.Spec.Containers[0].Command = []string{
+		"java",
 		"-Dvertx.cacheDirBase=/tmp",
 		"-Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.SLF4JLogDelegateFactory",
 		"-jar",
@@ -317,9 +381,10 @@ func (r *ReconcileProducer) configureMqtt(producer *simv1alpha1.SimulatorProduce
 
 }
 
-func (r *ReconcileProducer) configureHttp(producer *simv1alpha1.SimulatorProducer, existing *appsv1.DeploymentConfig, messageType string) {
+func (r *ReconcileProducer) configureHttp(producer *simv1alpha1.SimulatorProducer, pod *corev1.PodTemplateSpec, messageType string) {
 
-	existing.Spec.Template.Spec.Containers[0].Command = []string{"java",
+	pod.Spec.Containers[0].Command = []string{
+		"java",
 		"-Dvertx.cacheDirBase=/tmp",
 		"-Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.SLF4JLogDelegateFactory",
 		"-jar",
