@@ -17,6 +17,7 @@ import (
 	"context"
 	"strconv"
 
+	mycontroller "github.com/ctron/iot-simulator-operator/pkg/controller"
 	"github.com/ctron/iot-simulator-operator/pkg/images"
 
 	"github.com/ctron/operator-tools/pkg/install/openshift"
@@ -71,10 +72,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	err = c.Watch(&source.Kind{Type: &appsv1.DeploymentConfig{}}, &handler.EnqueueRequestForOwner{
-		IsController: true, OwnerType: &simv1alpha1.SimulatorProducer{},
-	})
-	if err != nil {
+	if err := mycontroller.WatchAll(c, &simv1alpha1.SimulatorProducer{}); err != nil {
 		return err
 	}
 
