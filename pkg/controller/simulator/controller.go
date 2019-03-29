@@ -17,7 +17,8 @@ import (
 	"context"
 	"strconv"
 
-	mycontroller "github.com/ctron/iot-simulator-operator/pkg/controller"
+	"github.com/ctron/iot-simulator-operator/pkg/utils"
+
 	"github.com/ctron/iot-simulator-operator/pkg/images"
 
 	"github.com/ctron/operator-tools/pkg/install/apps/deployment"
@@ -94,7 +95,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	if err := mycontroller.WatchAll(c, &simv1alpha1.Simulator{}); err != nil {
+	if err := utils.WatchAll(c, &simv1alpha1.Simulator{}); err != nil {
 		return err
 	}
 
