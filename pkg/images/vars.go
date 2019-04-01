@@ -15,6 +15,7 @@ package images
 
 import (
 	"os"
+	"strings"
 )
 
 var SimulatorImage string
@@ -31,6 +32,8 @@ func init() {
 	tag := os.Getenv("IMAGE_TAG")
 	if tag == "" {
 		tag = ":latest"
+	} else if !strings.HasPrefix(tag, ":") {
+		tag = ":" + tag
 	}
 
 	SimulatorImage = base + "/iot-hono-simulator" + tag
