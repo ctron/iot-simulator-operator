@@ -194,7 +194,7 @@ func (r *ReconcileConsumer) reconcileDeploymentConfig(request reconcile.Request,
 }
 
 func (r *ReconcileConsumer) reconcileDeployment(request reconcile.Request, instance *simv1alpha1.SimulatorConsumer) error {
-	dc := appsv1.DeploymentConfig{
+	dc := kappsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      utils.DeploymentConfigName("con", instance),
 			Namespace: request.Namespace,
