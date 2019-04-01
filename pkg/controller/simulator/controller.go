@@ -219,25 +219,35 @@ func (r *ReconcileSimulator) Reconcile(request reconcile.Request) (reconcile.Res
 
 	r.processConsoleDeployment(rec, sharedOwnerFn)
 
+	serviceMixins := []install.MixIn{sharedOwnerFn}
+	if openshift.IsOpenshift() {
+		serviceMixins = append(serviceMixins,
+			mixin.AppendAnnotationMixin("service.alpha.openshift.io/serving-cert-secret-name", "iot-simulator-console-tls"),
+		)
+	}
 	rec.Process(service.Service("iot-simulator-console", map[string]string{
 		"app":              "iot-simulator-console",
 		"deploymentconfig": "iot-simulator-console",
 	}, func(service *corev1.Service) error {
 
+		var port int32
+		if openshift.IsOpenshift() {
+			port = 8443
+		} else {
+			port = 8080
+		}
+
 		service.Spec.Ports = []corev1.ServicePort{
 			{
 				Name:       "ui",
-				Port:       8443,
-				TargetPort: intstr.FromInt(8443),
+				Port:       port,
+				TargetPort: intstr.FromString("ui"),
 				Protocol:   corev1.ProtocolTCP,
 			},
 		}
 
 		return nil
-	}, mixin.Mix(
-		sharedOwnerFn,
-		mixin.AppendAnnotationMixin("service.alpha.openshift.io/serving-cert-secret-name", "iot-simulator-console-tls"),
-	)))
+	}, mixin.Mix(serviceMixins...)))
 
 	if openshift.IsOpenshift() {
 		rec.Process(route.ReencryptRoute("iot-simulator-console", "iot-simulator-console", intstr.FromString("ui"), sharedOwnerFn))
