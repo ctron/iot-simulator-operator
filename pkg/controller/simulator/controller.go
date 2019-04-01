@@ -239,7 +239,9 @@ func (r *ReconcileSimulator) Reconcile(request reconcile.Request) (reconcile.Res
 		mixin.AppendAnnotationMixin("service.alpha.openshift.io/serving-cert-secret-name", "iot-simulator-console-tls"),
 	)))
 
-	rec.Process(route.ReencryptRoute("iot-simulator-console", "iot-simulator-console", intstr.FromString("ui"), sharedOwnerFn))
+	if openshift.IsOpenshift() {
+		rec.Process(route.ReencryptRoute("iot-simulator-console", "iot-simulator-console", intstr.FromString("ui"), sharedOwnerFn))
+	}
 
 	// prometheus
 

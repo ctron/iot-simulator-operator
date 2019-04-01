@@ -93,7 +93,7 @@ func main() {
 		panic(err)
 	}
 
-	log.Info("Starting the Cmd.")
+	log.Info("Starting the manager")
 
 	// Start the Cmd
 	if err := mgr.Start(signals.SetupSignalHandler()); err != nil {

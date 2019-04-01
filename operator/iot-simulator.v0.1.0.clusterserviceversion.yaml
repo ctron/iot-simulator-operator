@@ -2,7 +2,7 @@ apiVersion: operators.coreos.com/v1alpha1
 kind: ClusterServiceVersion
 metadata:
   name: iot-simulator.v0.1.0
-  namespace: placeholder
+  namespace: olm
   annotations:
     categories: "Streaming & Messaging"
     certified: "false"
@@ -96,6 +96,9 @@ spec:
               verbs: [ "*" ]
             - apiGroups: [ "apps.openshift.io" ]
               resources: [ "deploymentconfigs" ]
+              verbs: [ "*" ]
+            - apiGroups: [ "apps" ]
+              resources: [ "deployments" ]
               verbs: [ "*" ]
             - apiGroups: [ "image.openshift.io" ]
               resources: [ "imagestreams" ]

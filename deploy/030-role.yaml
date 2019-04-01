@@ -3,21 +3,43 @@ kind: Role
 metadata:
   name: iot-simulator-operator
 rules:
-- apiGroups: [ "" ]
-  resources: [ "configmaps", "secrets", "pods" ]
-  verbs: [ "*" ]
-- apiGroups: [ "apps.openshift.io" ]
-  resources: [ "deploymentconfigs" ]
-  verbs: [ '*' ]
-- apiGroups: [ "images.openshift.io" ]
-  resources: [ "imagestreams" ]
-  verbs: [ '*' ]
-- apiGroups: [ "builds.openshift.io" ]
-  resources: [ "buildconfigs" ]
-  verbs: [ '*' ]
-- apiGroups: [ "routes.openshift.io" ]
-  resources: [ "routes" ]
-  verbs: [ '*' ]
-- apiGroups: [ "iot.dentrassi.de" ]
-  resources: [ "simulators", "simulatorconsumers", "simulatorproducers" ]
-  verbs: [ '*' ]
+  - apiGroups: [ "" ]
+    resources: [ "configmaps", "secrets", "pods", "serviceaccounts", "services" ]
+    verbs: [ "*" ]
+  - apiGroups: [ "rbac.authorization.k8s.io" ]
+    resources: [ "roles", "rolebindings" ]
+    verbs: [ "*" ]
+  - apiGroups: [ "apps.openshift.io" ]
+    resources: [ "deploymentconfigs" ]
+    verbs: [ "*" ]
+  - apiGroups: [ "apps" ]
+    resources: [ "deployments" ]
+    verbs: [ "*" ]
+  - apiGroups: [ "image.openshift.io" ]
+    resources: [ "imagestreams" ]
+    verbs: [ "*" ]
+  - apiGroups: [ "build.openshift.io" ]
+    resources: [ "buildconfigs" ]
+    verbs: [ "*" ]
+  - apiGroups: [ "route.openshift.io" ]
+    resources: [ "routes" ]
+    verbs: [ "*" ]
+  - apiGroups: [ "iot.dentrassi.de" ]
+    resources:
+      - "simulators"
+      - "simulators/finalizers"
+      - "simulatorconsumers"
+      - "simulatorconsumers/finalizers"
+      - "simulatorproducers"
+      - "simulatorproducers/finalizers"
+    verbs: [ "*" ]
+  - apiGroups: [ "monitoring.coreos.com" ]
+    resources: [ "prometheuses", "servicemonitors" ]
+    verbs: [ "*" ]
+
+  - apiGroups: [""]
+    resources: ["endpoints", "pods"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["cm"]
+    verbs: ["get"]
