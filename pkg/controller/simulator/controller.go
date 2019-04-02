@@ -158,6 +158,7 @@ func (r *ReconcileSimulator) Reconcile(request reconcile.Request) (reconcile.Res
 	)))
 	rec.Process(role.WithRules("iot-simulator-console", []rbacv1.PolicyRule{
 		{APIGroups: []string{""}, Resources: []string{"pods"}, Verbs: []string{"get", "list", "watch"}},
+		{APIGroups: []string{"apps"}, Resources: []string{"deployments"}, Verbs: []string{"get", "list", "watch"}},
 		{APIGroups: []string{"apps.openshift.io"}, Resources: []string{"deploymentconfigs"}, Verbs: []string{"get", "list", "watch"}},
 	}, sharedOwnerFn))
 	rec.Process(rolebinding.ForServiceAccount("iot-simulator-console", "iot-simulator-console", "iot-simulator-console", sharedOwnerFn))
