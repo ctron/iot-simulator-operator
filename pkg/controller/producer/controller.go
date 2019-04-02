@@ -256,6 +256,7 @@ func (r *ReconcileProducer) applyPodSpec(producer *simv1alpha1.SimulatorProducer
 	pod.ObjectMeta.Labels["deploymentconfig"] = utils.DeploymentConfigName("prod", obj)
 	pod.ObjectMeta.Labels["iot.simulator.tenant"] = producer.Spec.Tenant
 	pod.ObjectMeta.Labels["iot.simulator"] = producer.Spec.Simulator
+	pod.ObjectMeta.Labels["iot.simulator.message.type"] = messageType
 
 	// containers
 

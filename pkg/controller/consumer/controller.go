@@ -250,6 +250,7 @@ func (r *ReconcileConsumer) applyConsumerPodSpec(consumer *simv1alpha1.Simulator
 	pod.ObjectMeta.Labels["deploymentconfig"] = labels["deploymentconfig"]
 	pod.ObjectMeta.Labels["iot.simulator.tenant"] = consumer.Spec.Tenant
 	pod.ObjectMeta.Labels["iot.simulator"] = consumer.Spec.Simulator
+	pod.ObjectMeta.Labels["iot.simulator.message.type"] = messageType
 
 	// container
 
