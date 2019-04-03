@@ -6,18 +6,100 @@ metadata:
   annotations:
     categories: "Streaming & Messaging"
     certified: "false"
-    description: An IoT device simulator, simulating producers and consumer for Eclipse Hono
+    description: An IoT device simulator, simulating producers and consumers using the Eclipse Hono API
     containerImage: ctron/iot-simulator-operator:0.1.0
     createdAt: 2019-03-19T00:00:00Z
     support: none
     capabilities: Seamless Upgrades
     repository: https://github.com/ctron/iot-simulator-operator
+    alm-examples: |-
+      [{
+      	"apiVersion": "iot.dentrassi.de/v1alpha1",
+      	"kind": "Simulator",
+      	"metadata": {
+      		"name": "hono1",
+      		"namespace": "iot-simulator"
+      	},
+      	"spec": {
+      		"endpoint": {
+      			"messaging": {
+      				"user": "foo",
+      				"password": "bar",
+      				"host": "messaging.host.hono.svc",
+      				"port": "5671",
+                    "caCertificate": ""
+      			},
+      			"registry": {
+      				"url": "https://your-device-registry"
+      			},
+      			"adapters": {
+      				"mqtt": {
+      					"host": "mqtt-adapter.hono.svc",
+      					"port": 8883
+      				},
+      				"http": {
+      					"url": "https://http-adapter.hono.svc"
+      				}
+      			}
+      		}
+      	}
+      },
+      {
+        "apiVersion": "iot.dentrassi.de/v1alpha1",
+        "kind": "SimulatorConsumer",
+        "metadata": {
+          "name": "consumer1",
+          "namespace": "iot-simulator"
+        },
+        "spec": {
+          "simulator": "hono1",
+          "tenant": "myapp1.iot",
+          "type": "telemetry",
+          "replicas": 1
+        }
+      },
+      {
+        "apiVersion": "iot.dentrassi.de/v1alpha1",
+        "kind": "SimulatorProducer",
+        "metadata": {
+          "name": "producer1",
+          "namespace": "iot-simulator"
+        },
+        "spec": {
+          "simulator": "hono1",
+          "tenant": "myapp1.iot",
+          "type": "telemetry",
+          "protocol": "http",
+          "replicas": 1,
+          "numberOfDevices": 10
+        }
+      }
+      ]
 
 spec:
   maturity: alpha
   displayName: IoT simulator
-  description: >
-    Foo bar
+  description: |
+    A scalable IoT simulator, which simulates producers (MQTT or HTTP) and consumers.
+
+    ## Pre-requisites
+
+    You will need to have access to a Hono instance, including the messaging backend
+    and the HTTP endpoint of the device registry.
+
+    ## Creating an instance
+
+    Once you have the operator deployed, you need to set up at least one `Simulator` resource.
+    This will trigger the creation of the web console and deploy a Prometheus instance for
+    gathering metrics. The `Simulator` instance also contains the endpoint information for the
+    Hono instance.
+
+    ## Producers & Consumer
+
+    After a `Simulator` instance has been created, you can create `SimulatorProducer` and
+    `SimulatorConsumer` instances as necessary. You will need to reference the `Simulator`
+    instance.
+
   version: 0.1.0
   keywords: ['iot', 'messaging', 'amqp', 'mqtt', 'http']
   labels:
@@ -27,8 +109,12 @@ spec:
       app: iot-simulator
 
   links:
-    - name: IoT Simulator
+    - name: Eclipse Hono™ Simulator
       url: https://github.com/ctron/hono-simulator
+    - name: IoT Simulator Console
+      url: https://github.com/ctron/iot-simulator-console
+    - name: IoT Simulator Operator
+      url: https://github.com/ctron/iot-simulator-operator
 
   maintainers:
     - email: ctron@dentrassi.de
@@ -137,16 +223,158 @@ spec:
         kind: Simulator
         displayName: Simulator
         description: A new simulator instance
+        resources:
+          - kind: DeploymentConfig
+            version: apps.openshift.io/v1
+            name: ""
+          - kind: BuildConfig
+            version: build.openshift.io/v1
+            name: ""
+          - kind: Route
+            version: route.openshift.io/v1
+            name: ""
+          - kind: ImageStream
+            version: imagestream.openshift.io/v1
+            name: ""
+          - kind: Deployment
+            version: apps/v1
+            name: ""
+          - kind: ConfigMap
+            version: v1
+            name: ""
+          - kind: Secret
+            version: v1
+            name: ""
+          - kind: Service
+            version: v1
+            name: ""
+          - kind: StatefulSet
+            version: apps/v1
+            name: ""
+        specDescriptors:
+          - path: endpoint.messaging.user
+            displayName: Messaging Endpoint User
+            description: The name of the user for the AMQP messaging endpoint
+            x-descriptors:
+              - urn:alm:descriptor:com.tectonic.ui:label
+          - path: endpoint.messaging.password
+            displayName: Messaging Endpoint Password
+            description: The password of the user for the AMQP messaging endpoint
+            x-descriptors:
+              - urn:alm:descriptor:com.tectonic.ui:label
+          - path: endpoint.messaging.caCertificate
+            displayName: Messaging Endpoint CA Certificate
+            description: A CA certificate to validate the AMQP messaging endpoint
+            x-descriptors:
+              - urn:alm:descriptor:com.tectonic.ui:label
+          - path: endpoint.messaging.host
+            displayName: Messaging Endpoint Host
+            description: The hostname of the AMQP messaging endpoint
+            x-descriptors:
+              - urn:alm:descriptor:com.tectonic.ui:label
+          - path: endpoint.messaging.port
+            displayName: Messaging Endpoint Port
+            description: The port of the AMQP messaging endpoint
+            x-descriptors:
+              - urn:alm:descriptor:com.tectonic.ui:label
+          - path: endpoint.registry.url
+            displayName: Device Registry URL
+            description: The URL of the device registry instance
+            x-descriptors:
+              - urn:alm:descriptor:com.tectonic.ui:label
+          - path: endpoint.adapters.mqtt.host
+            displayName: MQTT Protocol Adapter Hostname
+            description: The hostname of the MQTT protocol adapter
+            x-descriptors:
+              - urn:alm:descriptor:com.tectonic.ui:label
+          - path: endpoint.adapters.mqtt.port
+            displayName: MQTT Protocol Adapter Port
+            description: The port of the MQTT protocol adapter
+            x-descriptors:
+              - urn:alm:descriptor:com.tectonic.ui:label
+          - path: endpoint.adapters.http.url
+            displayName: HTTP Protocol Adapter URL
+            description: The URL of the HTTP protocol adapter
+            x-descriptors:
+              - urn:alm:descriptor:com.tectonic.ui:label
+
       - name: simulatorconsumers.iot.dentrassi.de
         kind: SimulatorConsumer
         version: v1alpha1
         displayName: Simulator Consumer
         description: A new consumer for an existing simulator instance
+        resources:
+          - kind: DeploymentConfig
+            version: apps.openshift.io/v1
+            name: ""
+          - kind: Deployment
+            version: apps/v1
+            name: ""
+        specDescriptors:
+          - path: simulator
+            displayName: Simulator ID
+            description: The ID of the simulator instance
+            x-descriptors:
+              - urn:alm:descriptor:io.kubernetes:iot.dentrassi.de:v1alpha1:Simulator
+          - path: tenant
+            displayName: Tenant Name
+            description: The name of the Hono tenant
+            x-descriptors:
+              - urn:alm:descriptor:com.tectonic.ui:label
+          - path: type
+            displayName: Message Type
+            description: The type of messages being consumed
+            x-descriptors:
+              - urn:alm:descriptor:com.tectonic.ui:label
+          - path: replicas
+            displayName: Replicas
+            description: The number of replicas
+            x-descriptors:
+              - urn:alm:descriptor:com.tectonic.ui:podCount
+
       - name: simulatorproducers.iot.dentrassi.de
         version: v1alpha1
         kind: SimulatorProducer
         displayName: Simulator Producer
         description: A new producer for an existing simulator instance
+        resources:
+          - kind: DeploymentConfig
+            version: apps.openshift.io/v1
+            name: ""
+          - kind: Deployment
+            version: apps/v1
+            name: ""
+        specDescriptors:
+          - path: simulator
+            displayName: Simulator ID
+            description: The ID of the simulator instance
+            x-descriptors:
+              - urn:alm:descriptor:io.kubernetes:iot.dentrassi.de:v1alpha1:Simulator
+          - path: tenant
+            displayName: Tenant Name
+            description: The name of the Hono tenant
+            x-descriptors:
+              - urn:alm:descriptor:com.tectonic.ui:label
+          - path: type
+            displayName: Message Type
+            description: The type of messages being produces
+            x-descriptors:
+              - urn:alm:descriptor:com.tectonic.ui:label
+          - path: replicas
+            displayName: Replicas
+            description: The number of replicas
+            x-descriptors:
+              - urn:alm:descriptor:com.tectonic.ui:podCount
+          - path: protocol
+            displayName: Protocol Type
+            description: The type of the protocol
+            x-descriptors:
+              - urn:alm:descriptor:com.tectonic.ui:label
+          - path: numberOfDevices
+            displayName: Number of devices per pod
+            description: The number of devices simulated per pod
+            x-descriptors:
+              - urn:alm:descriptor:com.tectonic.ui:label
 
     required:
       - name: prometheuses.monitoring.coreos.com
