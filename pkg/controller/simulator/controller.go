@@ -178,7 +178,8 @@ func (r *ReconcileSimulator) Reconcile(request reconcile.Request) (reconcile.Res
 		rec.Process(build.ReconcileBuildConfigSimple("iot-simulator-base", func(config *buildv1.BuildConfig) error {
 
 			build.SetDockerStrategyFromImageStream(config, "centos:7")
-			build.SetGitSource(config, "https://github.com/ctron/hono-simulator", "develop")
+			uri, ref := images.EvalBuildSource(instance, "hono-simulator")
+			build.SetGitSource(config, uri, ref)
 			config.Spec.Source.ContextDir = "containers/base"
 			build.SetOutputImageStream(config, instanceName(instance, "iot-simulator-base")+":latest")
 			build.EnableDefaultTriggers(config)
@@ -191,7 +192,8 @@ func (r *ReconcileSimulator) Reconcile(request reconcile.Request) (reconcile.Res
 		rec.Process(build.ReconcileBuildConfigSimple("iot-simulator-parent", func(config *buildv1.BuildConfig) error {
 
 			build.SetDockerStrategyFromImageStream(config, instanceName(instance, "iot-simulator-base")+":latest")
-			build.SetGitSource(config, "https://github.com/ctron/hono-simulator", "develop")
+			uri, ref := images.EvalBuildSource(instance, "hono-simulator")
+			build.SetGitSource(config, uri, ref)
 			build.SetOutputImageStream(config, instanceName(instance, "iot-simulator-parent")+":latest")
 			build.EnableDefaultTriggers(config)
 
@@ -203,7 +205,8 @@ func (r *ReconcileSimulator) Reconcile(request reconcile.Request) (reconcile.Res
 		rec.Process(build.ReconcileBuildConfigSimple("iot-simulator-console", func(config *buildv1.BuildConfig) error {
 
 			build.SetDockerStrategyFromImageStream(config, "fedora:29")
-			build.SetGitSource(config, "https://github.com/ctron/iot-simulator-console", "develop")
+			uri, ref := images.EvalBuildSource(instance, "iot-simulator-console")
+			build.SetGitSource(config, uri, ref)
 			build.SetOutputImageStream(config, "iot-simulator-console:latest")
 			build.EnableDefaultTriggers(config)
 

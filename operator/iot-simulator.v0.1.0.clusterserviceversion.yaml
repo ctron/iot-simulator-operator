@@ -7,7 +7,7 @@ metadata:
     categories: "Streaming & Messaging"
     certified: "false"
     description: An IoT device simulator, simulating producers and consumers using the Eclipse Hono API
-    containerImage: ctron/iot-simulator-operator:0.1.0
+    containerImage: ctron/iot-simulator-operator:0.1
     createdAt: 2019-03-19T00:00:00Z
     support: none
     capabilities: Seamless Upgrades
@@ -154,7 +154,7 @@ spec:
 
                 containers:
                   - name: operator
-                    image: 'docker.io/ctron/iot-simulator-operator:0.1.0'
+                    image: 'docker.io/ctron/iot-simulator-operator:0.1'
                     imagePullPolicy: Always
 
                     env:
@@ -163,7 +163,9 @@ spec:
                           fieldRef:
                             fieldPath: metadata.namespace
                       - name: IMAGE_TAG
-                        value: "0.1.0"
+                        value: "0.1"
+                      - name: DEFAULT_GIT_REF
+                        value: "release-0.1.x"
 
                     resources:
                       limits:
