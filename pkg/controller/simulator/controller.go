@@ -239,17 +239,20 @@ func (r *ReconcileSimulator) Reconcile(request reconcile.Request) (reconcile.Res
 	}, func(service *corev1.Service) error {
 
 		var port int32
+		var targetPort intstr.IntOrString
 		if openshift.IsOpenshift() {
 			port = 8443
+			targetPort = intstr.FromString("proxy")
 		} else {
 			port = 8080
+			targetPort = intstr.FromString("ui")
 		}
 
 		service.Spec.Ports = []corev1.ServicePort{
 			{
 				Name:       "ui",
 				Port:       port,
-				TargetPort: intstr.FromString("ui"),
+				TargetPort: targetPort,
 				Protocol:   corev1.ProtocolTCP,
 			},
 		}
