@@ -416,6 +416,7 @@ func (r *ReconcileSimulator) processConsoleDeploymentConfig(rec recon.Reconcile,
 		}
 
 		dc.Spec.Triggers[0].Type = appsv1.DeploymentTriggerOnConfigChange
+
 		dc.Spec.Triggers[1].Type = appsv1.DeploymentTriggerOnImageChange
 		if dc.Spec.Triggers[1].ImageChangeParams == nil {
 			dc.Spec.Triggers[1].ImageChangeParams = &appsv1.DeploymentTriggerImageChangeParams{}
@@ -465,7 +466,6 @@ func (r *ReconcileSimulator) applyConsolePodSpec(obj metav1.Object, spec *corev1
 	// container - console
 
 	spec.Spec.Containers[0].Name = "console"
-	spec.Spec.Containers[0].Image = "iot-simulator-console"
 	spec.Spec.Containers[0].ImagePullPolicy = corev1.PullAlways
 
 	spec.Spec.Containers[0].Env = []corev1.EnvVar{
