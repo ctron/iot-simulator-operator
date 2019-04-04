@@ -221,7 +221,11 @@ func (r *ReconcileSimulator) Reconcile(request reconcile.Request) (reconcile.Res
 
 	// deployments
 
-	r.processConsoleDeployment(rec, sharedOwnerFn)
+	if openshift.IsOpenshift() {
+		r.processConsoleDeploymentConfig(rec, sharedOwnerFn)
+	} else {
+		r.processConsoleDeployment(rec, sharedOwnerFn)
+	}
 
 	serviceMixins := []install.MixIn{sharedOwnerFn}
 	if openshift.IsOpenshift() {
