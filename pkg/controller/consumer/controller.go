@@ -319,7 +319,9 @@ func (r *ReconcileConsumer) configureDeployment(consumer *simv1alpha1.SimulatorC
 
 	r.applyConsumerPodSpec(consumer, existing, &existing.Spec.Template)
 
-	existing.Spec.Replicas = &consumer.Spec.Replicas
+	if consumer.Spec.Replicas != nil {
+		existing.Spec.Replicas = consumer.Spec.Replicas
+	}
 
 	if existing.Spec.Selector == nil {
 		existing.Spec.Selector = &metav1.LabelSelector{}
@@ -342,7 +344,10 @@ func (r *ReconcileConsumer) configureDeploymentConfig(consumer *simv1alpha1.Simu
 
 	r.applyConsumerPodSpec(consumer, existing, existing.Spec.Template)
 
-	existing.Spec.Replicas = consumer.Spec.Replicas
+	if consumer.Spec.Replicas != nil {
+		existing.Spec.Replicas = *consumer.Spec.Replicas
+	}
+
 	existing.Spec.Selector = map[string]string{
 		"app":              existing.Labels["app"],
 		"deploymentconfig": existing.Labels["deploymentconfig"],

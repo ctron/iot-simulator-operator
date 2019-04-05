@@ -81,7 +81,7 @@ type CommonSpec struct {
 	Tenant    string `json:"tenant"`
 	Type      string `json:"type"`
 
-	Replicas int32 `json:"replicas"`
+	Replicas *int32 `json:"replicas,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

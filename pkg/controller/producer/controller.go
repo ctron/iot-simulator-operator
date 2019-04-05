@@ -320,7 +320,9 @@ func (r *ReconcileProducer) configureDeployment(producer *simv1alpha1.SimulatorP
 
 	r.applyPodSpec(producer, existing, &existing.Spec.Template)
 
-	existing.Spec.Replicas = &producer.Spec.Replicas
+	if producer.Spec.Replicas != nil {
+		existing.Spec.Replicas = producer.Spec.Replicas
+	}
 
 	if existing.Spec.Selector == nil {
 		existing.Spec.Selector = &metav1.LabelSelector{}
@@ -342,7 +344,10 @@ func (r *ReconcileProducer) configureDeploymentConfig(producer *simv1alpha1.Simu
 
 	r.applyPodSpec(producer, existing, existing.Spec.Template)
 
-	existing.Spec.Replicas = producer.Spec.Replicas
+	if producer.Spec.Replicas != nil {
+		existing.Spec.Replicas = *producer.Spec.Replicas
+	}
+
 	existing.Spec.Selector = map[string]string{
 		"app":              utils.MakeInstanceName(producer),
 		"deploymentconfig": utils.DeploymentConfigName("prod", existing),
