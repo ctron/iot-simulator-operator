@@ -1,9 +1,10 @@
-FROM fedora:29
+FROM centos:7
 
 MAINTAINER Jens Reimann <jreimann@redhat.com>
 LABEL maintainer="Jens Reimann <jreimann@redhat.com>"
 
-RUN dnf -y update
+RUN yum -y update
+RUN yum -y install epel-release
 
 ENV \
     GOPATH=/go
@@ -11,12 +12,12 @@ ENV \
 RUN mkdir -p /go/src/github.com/ctron
 ADD . /go/src/github.com/ctron/iot-simulator-operator
 
-RUN dnf -y install golang && \
+RUN yum -y install golang && \
     go version && \
     cd /go/src/github.com/ctron/iot-simulator-operator/cmd/manager && go build -o /iot-simulator-operator . && \
     cd / && \
     rm -Rf go && \
-    dnf -y history undo last && dnf -y clean all && \
+    yum -y history undo last && yum -y clean all && \
     true
 
 ENV IMAGE_TAG=":latest"
