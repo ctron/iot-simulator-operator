@@ -204,7 +204,7 @@ func (r *ReconcileSimulator) Reconcile(request reconcile.Request) (reconcile.Res
 
 		rec.Process(build.ReconcileBuildConfigSimple("iot-simulator-console", func(config *buildv1.BuildConfig) error {
 
-			build.SetDockerStrategyFromImageStream(config, "fedora:29")
+			build.SetDockerStrategyFromImageStream(config, "centos:7")
 			uri, ref := images.EvalBuildSource(instance, "iot-simulator-console")
 			build.SetGitSource(config, uri, ref)
 			build.SetOutputImageStream(config, "iot-simulator-console:latest")
