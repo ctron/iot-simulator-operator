@@ -1,7 +1,7 @@
 apiVersion: operators.coreos.com/v1alpha1
 kind: ClusterServiceVersion
 metadata:
-  name: iot-simulator.v0.1.0
+  name: iot-simulator.0.1.0
   namespace: olm
   annotations:
     categories: "Streaming & Messaging"
@@ -379,6 +379,7 @@ spec:
             description: The number of devices simulated per pod
             x-descriptors:
               - urn:alm:descriptor:com.tectonic.ui:label
+        statusDescriptors:
 
     required:
       - name: prometheuses.monitoring.coreos.com

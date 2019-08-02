@@ -23,12 +23,16 @@ type Simulator struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec SimulatorSpec `json:"spec,omitempty"`
+	Spec   SimulatorSpec   `json:"spec"`
+	Status SimulatorStatus `json:"status"`
 }
 
 type SimulatorSpec struct {
 	Builds   map[string]Build  `json:"builds,omitempty"`
 	Endpoint SimulatorEndpoint `json:"endpoint"`
+}
+
+type SimulatorStatus struct {
 }
 
 type Build struct {
@@ -90,11 +94,15 @@ type SimulatorConsumer struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec ConsumerSpec `json:"spec,omitempty"`
+	Spec   ConsumerSpec   `json:"spec"`
+	Status ConsumerStatus `json:"status"`
 }
 
 type ConsumerSpec struct {
 	CommonSpec
+}
+
+type ConsumerStatus struct {
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -104,7 +112,8 @@ type SimulatorProducer struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec ProducerSpec `json:"spec,omitempty"`
+	Spec   ProducerSpec   `json:"spec"`
+	Status ProducerStatus `json:"status"`
 }
 
 type Protocol string
@@ -119,6 +128,9 @@ type ProducerSpec struct {
 
 	NumberOfDevices uint32  `json:"numberOfDevices"`
 	NumberOfThreads *uint32 `json:"numberOfThreads,omitempty"`
+}
+
+type ProducerStatus struct {
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
