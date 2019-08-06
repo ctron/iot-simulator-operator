@@ -16,6 +16,8 @@ package consumer
 import (
 	"context"
 
+	"github.com/ctron/operator-tools/pkg/recon"
+
 	"github.com/ctron/iot-simulator-operator/pkg/images"
 
 	"github.com/ctron/operator-tools/pkg/install/openshift"
@@ -104,22 +106,27 @@ func (r *ReconcileConsumer) Reconcile(request reconcile.Request) (reconcile.Resu
 		return reconcile.Result{}, err
 	}
 
-	if openshift.IsOpenshift() {
-		err = r.reconcileDeploymentConfig(request, instance)
-	} else {
-		err = r.reconcileDeployment(request, instance)
-	}
+	rec := recon.NewContext(context.TODO(), request, r.client, r.scheme)
 
-	if err != nil {
-		return reconcile.Result{}, err
-	}
+	rec.ProcessSimple(func(ctx recon.InstallContext) error {
+		if openshift.IsOpenshift() {
+			return r.reconcileDeploymentConfig(request, instance)
+		} else {
+			return r.reconcileDeployment(request, instance)
+		}
+	})
 
-	err = r.reconcileService(request, instance)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
+	rec.ProcessSimple(func(ctx recon.InstallContext) error {
+		return r.reconcileService(request, instance)
+	})
 
-	return reconcile.Result{}, nil
+	// final status update
+
+	rec.ProcessSimple(func(ctx recon.InstallContext) error {
+		return ctx.GetClient().Status().Update(ctx.GetContext(), instance)
+	})
+
+	return rec.Result()
 }
 
 func (r *ReconcileConsumer) reconcileService(request reconcile.Request, instance *simv1alpha1.SimulatorConsumer) error {

@@ -344,6 +344,12 @@ func (r *ReconcileSimulator) Reconcile(request reconcile.Request) (reconcile.Res
 		return nil
 	}, ownerFn))
 
+	// final status update
+
+	rec.ProcessSimple(func(ctx recon.InstallContext) error {
+		return ctx.GetClient().Status().Update(ctx.GetContext(), instance)
+	})
+
 	return rec.Result()
 }
 
