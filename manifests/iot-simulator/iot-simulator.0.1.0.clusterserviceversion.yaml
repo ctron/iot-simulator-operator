@@ -2,7 +2,7 @@ apiVersion: operators.coreos.com/v1alpha1
 kind: ClusterServiceVersion
 metadata:
   name: iot-simulator.0.1.0
-  namespace: olm
+  namespace: placeholder
   annotations:
     categories: "Streaming & Messaging"
     certified: "false"
@@ -14,35 +14,35 @@ metadata:
     repository: https://github.com/ctron/iot-simulator-operator
     alm-examples: |-
       [{
-      	"apiVersion": "iot.dentrassi.de/v1alpha1",
-      	"kind": "Simulator",
-      	"metadata": {
-      		"name": "hono1",
-      		"namespace": "iot-simulator"
-      	},
-      	"spec": {
-      		"endpoint": {
-      			"messaging": {
-      				"user": "foo",
-      				"password": "bar",
-      				"host": "messaging.host.hono.svc",
-      				"port": 5671,
-                    "caCertificate": ""
-      			},
-      			"registry": {
-      				"url": "https://your-device-registry"
-      			},
-      			"adapters": {
-      				"mqtt": {
-      					"host": "mqtt-adapter.hono.svc",
-      					"port": 8883
-      				},
-      				"http": {
-      					"url": "https://http-adapter.hono.svc"
-      				}
-      			}
-      		}
-      	}
+          "apiVersion": "iot.dentrassi.de/v1alpha1",
+          "kind": "Simulator",
+          "metadata": {
+            "name": "hono1",
+              "namespace": "iot-simulator"
+          },
+          "spec": {
+              "endpoint": {
+                  "messaging": {
+                      "user": "foo",
+                      "password": "bar",
+                      "host": "messaging.host.hono.svc",
+                      "port": 5671,
+                      "caCertificate": ""
+                  },
+                  "registry": {
+                      "url": "https://your-device-registry"
+                  },
+                  "adapters": {
+                      "mqtt": {
+                          "host": "mqtt-adapter.hono.svc",
+                          "port": 8883
+                      },
+                      "http": {
+                          "url": "https://http-adapter.hono.svc"
+                      }
+                  }
+              }
+          }
       },
       {
         "apiVersion": "iot.dentrassi.de/v1alpha1",
@@ -87,6 +87,9 @@ spec:
     You will need to have access to a Hono instance, including the messaging backend
     and the HTTP endpoint of the device registry.
 
+    As metrics information is stored in a Prometheus instance, this operator also
+    requires the Prometheus operator to be installed.
+
     ## Creating an instance
 
     Once you have the operator deployed, you need to set up at least one `Simulator` resource.
@@ -103,10 +106,10 @@ spec:
   version: 0.1.0
   keywords: ['iot', 'messaging', 'amqp', 'mqtt', 'http']
   labels:
-    app: iot-simulator
+    alm-owner-iot-simulator: iot-simulator
   selector:
     matchLabels:
-      app: iot-simulator
+      alm-owner-iot-simulator: iot-simulator
 
   links:
     - name: Documentation
@@ -126,14 +129,14 @@ spec:
     name: Jens Reimann
 
   installModes:
-  - type: OwnNamespace
-    supported: true
-  - type: SingleNamespace
-    supported: true
-  - type: MultiNamespace
-    supported: false
-  - type: AllNamespaces
-    supported: false
+    - type: OwnNamespace
+      supported: true
+    - type: SingleNamespace
+      supported: true
+    - type: MultiNamespace
+      supported: false
+    - type: AllNamespaces
+      supported: false
 
   install:
     strategy: deployment
@@ -161,7 +164,7 @@ spec:
                       - name: WATCH_NAMESPACE
                         valueFrom:
                           fieldRef:
-                            fieldPath: metadata.namespace
+                            fieldPath: metadata.annotations['olm.targetNamespaces']
                       - name: IMAGE_TAG
                         value: "0.1"
                       - name: DEFAULT_GIT_REF
@@ -382,7 +385,6 @@ spec:
             description: The number of devices simulated per pod
             x-descriptors:
               - urn:alm:descriptor:com.tectonic.ui:label
-        statusDescriptors:
 
     required:
       - name: prometheuses.monitoring.coreos.com
