@@ -28,10 +28,13 @@ rules:
     resources:
       - "simulators"
       - "simulators/finalizers"
+      - "simulators/status"
       - "simulatorconsumers"
       - "simulatorconsumers/finalizers"
+      - "simulatorconsumers/status"
       - "simulatorproducers"
       - "simulatorproducers/finalizers"
+      - "simulatorproducers/status"
     verbs: [ "*" ]
   - apiGroups: [ "monitoring.coreos.com" ]
     resources: [ "prometheuses", "servicemonitors" ]
