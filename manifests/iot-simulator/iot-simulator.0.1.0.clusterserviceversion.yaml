@@ -26,7 +26,7 @@ metadata:
       				"user": "foo",
       				"password": "bar",
       				"host": "messaging.host.hono.svc",
-      				"port": "5671",
+      				"port": 5671,
                     "caCertificate": ""
       			},
       			"registry": {
@@ -203,10 +203,13 @@ spec:
               resources:
                 - "simulators"
                 - "simulators/finalizers"
+                - "simulators/status"
                 - "simulatorconsumers"
                 - "simulatorconsumers/finalizers"
+                - "simulatorconsumers/status"
                 - "simulatorproducers"
                 - "simulatorproducers/finalizers"
+                - "simulatorproducers/status"
               verbs: [ "*" ]
             - apiGroups: [ "monitoring.coreos.com" ]
               resources: [ "prometheuses", "servicemonitors" ]
