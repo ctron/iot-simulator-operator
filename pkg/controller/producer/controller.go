@@ -207,7 +207,7 @@ func (r *ReconcileProducer) configureService(producer *simv1alpha1.SimulatorProd
 	}
 
 	existing.ObjectMeta.Labels["app"] = utils.MakeInstanceName(producer)
-	existing.ObjectMeta.Labels["deploymentconfig"] = utils.DeploymentConfigName("prod", existing)
+	existing.ObjectMeta.Labels["deploymentconfig"] = utils.DeploymentConfigName("prod", producer)
 	existing.ObjectMeta.Labels["metrics"] = "iot-simulator"
 	existing.ObjectMeta.Labels["iot.simulator"] = producer.Spec.Simulator
 
@@ -246,7 +246,7 @@ func (r *ReconcileProducer) applyPodSpec(producer *simv1alpha1.SimulatorProducer
 	}
 
 	labels["app"] = utils.MakeInstanceName(producer)
-	labels["deploymentconfig"] = utils.DeploymentConfigName("prod", obj)
+	labels["deploymentconfig"] = utils.DeploymentConfigName("prod", producer)
 	labels["iot.simulator.tenant"] = producer.Spec.Tenant
 	labels["iot.simulator"] = producer.Spec.Simulator
 	labels["iot.simulator.app"] = "producer"
@@ -260,7 +260,7 @@ func (r *ReconcileProducer) applyPodSpec(producer *simv1alpha1.SimulatorProducer
 	}
 
 	pod.ObjectMeta.Labels["app"] = utils.MakeInstanceName(producer)
-	pod.ObjectMeta.Labels["deploymentconfig"] = utils.DeploymentConfigName("prod", obj)
+	pod.ObjectMeta.Labels["deploymentconfig"] = utils.DeploymentConfigName("prod", producer)
 	pod.ObjectMeta.Labels["iot.simulator.tenant"] = producer.Spec.Tenant
 	pod.ObjectMeta.Labels["iot.simulator"] = producer.Spec.Simulator
 	pod.ObjectMeta.Labels["iot.simulator.message.type"] = messageType
@@ -358,7 +358,7 @@ func (r *ReconcileProducer) configureDeploymentConfig(producer *simv1alpha1.Simu
 
 	existing.Spec.Selector = map[string]string{
 		"app":              utils.MakeInstanceName(producer),
-		"deploymentconfig": utils.DeploymentConfigName("prod", existing),
+		"deploymentconfig": utils.DeploymentConfigName("prod", producer),
 	}
 
 	existing.Spec.Strategy.Type = appsv1.DeploymentStrategyTypeRecreate

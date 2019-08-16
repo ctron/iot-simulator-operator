@@ -160,7 +160,7 @@ func (r *ReconcileConsumer) configureService(consumer *simv1alpha1.SimulatorCons
 	}
 
 	existing.ObjectMeta.Labels["app"] = utils.MakeInstanceName(consumer)
-	existing.ObjectMeta.Labels["deploymentconfig"] = utils.DeploymentConfigName("con", existing)
+	existing.ObjectMeta.Labels["deploymentconfig"] = utils.DeploymentConfigName("con", consumer)
 	existing.ObjectMeta.Labels["metrics"] = "iot-simulator"
 	existing.ObjectMeta.Labels["iot.simulator"] = consumer.Spec.Simulator
 
@@ -237,7 +237,7 @@ func (r *ReconcileConsumer) applyConsumerPodSpec(consumer *simv1alpha1.Simulator
 	}
 
 	labels["app"] = utils.MakeInstanceName(consumer)
-	labels["deploymentconfig"] = utils.DeploymentConfigName("con", obj)
+	labels["deploymentconfig"] = utils.DeploymentConfigName("con", consumer)
 	labels["iot.simulator.tenant"] = consumer.Spec.Tenant
 	labels["iot.simulator"] = consumer.Spec.Simulator
 	labels["iot.simulator.app"] = "consumer"
