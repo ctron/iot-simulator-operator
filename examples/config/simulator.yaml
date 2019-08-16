@@ -5,12 +5,13 @@ metadata:
   name: enmasse1
 spec:
   simulator:
-    base:
-      git:
-        ref: develop
-    console:
-      git:
-        ref: develop
+    builds:
+      hono-simulator:
+        git:
+          ref: develop
+      iot-simulator-console:
+        git:
+          ref: develop
   endpoint:
     messaging:
       host: messaging-v2i2kfsult.enmasse-infra.svc
