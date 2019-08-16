@@ -46,7 +46,7 @@ type GitSource struct {
 
 type SimulatorEndpoint struct {
 	Messaging MessagingEndpoint `json:"messaging"`
-	Registry  URLEndpoint       `json:"registry"`
+	Registry  RegistryEndpoint  `json:"registry"`
 	Adapters  AdapterEndpoints  `json:"adapters"`
 }
 
@@ -66,6 +66,12 @@ type MessagingEndpoint struct {
 type AdapterEndpoints struct {
 	HTTP URLEndpoint         `json:"http"`
 	MQTT HostAndPortEndpoint `json:"mqtt"`
+}
+
+type RegistryEndpoint struct {
+	URLEndpoint `json:",inline"`
+
+	APIVersion string `json:"apiVersion,omitempty"`
 }
 
 type URLEndpoint struct {
