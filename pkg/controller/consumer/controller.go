@@ -281,6 +281,8 @@ func (r *ReconcileConsumer) applyConsumerPodSpec(consumer *simv1alpha1.Simulator
 		{Name: "HONO_PASSWORD", ValueFrom: &v1.EnvVarSource{SecretKeyRef: &v1.SecretKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: simulatorName}, Key: "endpoint.password"}}},
 		{Name: "MESSAGING_SERVICE_HOST", ValueFrom: &v1.EnvVarSource{ConfigMapKeyRef: &v1.ConfigMapKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: simulatorName}, Key: "endpoint.host"}}},
 		{Name: "MESSAGING_SERVICE_PORT_AMQP", ValueFrom: &v1.EnvVarSource{ConfigMapKeyRef: &v1.ConfigMapKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: simulatorName}, Key: "endpoint.port"}}},
+
+		{Name: "TLS_INSECURE", ValueFrom: &v1.EnvVarSource{ConfigMapKeyRef: &v1.ConfigMapKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: simulatorName}, Key: "tls.insecure"}}},
 	}
 	pod.Spec.Containers[0].Ports = []v1.ContainerPort{
 		{

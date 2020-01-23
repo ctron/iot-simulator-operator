@@ -326,6 +326,11 @@ func (r *ReconcileSimulator) Reconcile(request reconcile.Request) (reconcile.Res
 		configMap.Data["mqttAdapter.port"] = strconv.Itoa(instance.Spec.Endpoint.Adapters.MQTT.Port)
 
 		configMap.Data["httpAdapter.url"] = instance.Spec.Endpoint.Adapters.HTTP.URL
+		if instance.Spec.Endpoint.InsecureTls {
+			configMap.Data["tls.insecure"] = "true"
+		} else {
+			configMap.Data["tls.insecure"] = "false"
+		}
 
 		return nil
 	}, ownerFn))

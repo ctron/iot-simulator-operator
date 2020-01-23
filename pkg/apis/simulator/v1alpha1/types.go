@@ -48,6 +48,8 @@ type SimulatorEndpoint struct {
 	Messaging MessagingEndpoint `json:"messaging"`
 	Registry  RegistryEndpoint  `json:"registry"`
 	Adapters  AdapterEndpoints  `json:"adapters"`
+
+	InsecureTls bool `json:"insecureTls,omitempty"`
 }
 
 type HostAndPortEndpoint struct {

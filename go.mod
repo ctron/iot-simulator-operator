@@ -1,7 +1,5 @@
 module github.com/ctron/iot-simulator-operator
 
-go 1.12
-
 require (
 	cloud.google.com/go v0.0.0-20160913182117-3b1ae45394a2
 	github.com/PuerkitoBio/purell v1.1.0

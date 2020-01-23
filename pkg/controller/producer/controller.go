@@ -282,6 +282,8 @@ func (r *ReconcileProducer) applyPodSpec(producer *simv1alpha1.SimulatorProducer
 		{Name: "HONO_TENANT", ValueFrom: &v1.EnvVarSource{FieldRef: &v1.ObjectFieldSelector{APIVersion: "v1", FieldPath: "metadata.labels['iot.simulator.tenant']"}}},
 		{Name: "DEVICE_REGISTRY_URL", ValueFrom: &v1.EnvVarSource{ConfigMapKeyRef: &v1.ConfigMapKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: simulatorName}, Key: "deviceRegistry.url"}}},
 		{Name: "DEVICE_REGISTRY_VERSION", ValueFrom: &v1.EnvVarSource{ConfigMapKeyRef: &v1.ConfigMapKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: simulatorName}, Key: "deviceRegistry.apiVersion"}}},
+
+		{Name: "TLS_INSECURE", ValueFrom: &v1.EnvVarSource{ConfigMapKeyRef: &v1.ConfigMapKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: simulatorName}, Key: "tls.insecure"}}},
 	}
 
 	if producer.Spec.NumberOfThreads != nil {
