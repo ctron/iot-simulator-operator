@@ -74,6 +74,7 @@ type RegistryEndpoint struct {
 	URLEndpoint `json:",inline"`
 
 	APIVersion string `json:"apiVersion,omitempty"`
+	Token      string `json:"token,omitempty"`
 }
 
 type URLEndpoint struct {

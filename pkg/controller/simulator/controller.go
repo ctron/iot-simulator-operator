@@ -321,6 +321,7 @@ func (r *ReconcileSimulator) Reconcile(request reconcile.Request) (reconcile.Res
 
 		configMap.Data["deviceRegistry.url"] = instance.Spec.Endpoint.Registry.URL
 		configMap.Data["deviceRegistry.apiVersion"] = instance.Spec.Endpoint.Registry.APIVersion
+		configMap.Data["deviceRegistry.token"] = instance.Spec.Endpoint.Registry.Token
 
 		configMap.Data["mqttAdapter.host"] = instance.Spec.Endpoint.Adapters.MQTT.Host
 		configMap.Data["mqttAdapter.port"] = strconv.Itoa(instance.Spec.Endpoint.Adapters.MQTT.Port)
