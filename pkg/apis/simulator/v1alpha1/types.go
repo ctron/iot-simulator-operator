@@ -95,6 +95,7 @@ type CommonSpec struct {
 	Type      string `json:"type"`
 
 	Replicas *int32 `json:"replicas,omitempty"`
+	LogLevel string `json:"logLevel,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

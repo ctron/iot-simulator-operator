@@ -273,6 +273,8 @@ func (r *ReconcileConsumer) applyConsumerPodSpec(consumer *simv1alpha1.Simulator
 		{Name: "CONSUMING", ValueFrom: &v1.EnvVarSource{FieldRef: &v1.ObjectFieldSelector{APIVersion: "v1", FieldPath: "metadata.labels['iot.simulator.message.type']"}}},
 		{Name: "MESSAGE_TYPE", ValueFrom: &v1.EnvVarSource{FieldRef: &v1.ObjectFieldSelector{APIVersion: "v1", FieldPath: "metadata.labels['iot.simulator.message.type']"}}},
 
+		{Name: "ROOT_LOG_LEVEL", Value: consumer.Spec.LogLevel},
+
 		{Name: "HONO_TRUSTED_CERTS", Value: "/etc/secrets/messaging.ca.crt"},
 		{Name: "HONO_INITIAL_CREDITS", Value: "100"},
 		{Name: "HONO_TENANT", ValueFrom: &v1.EnvVarSource{FieldRef: &v1.ObjectFieldSelector{APIVersion: "v1", FieldPath: "metadata.labels['iot.simulator.tenant']"}}},
